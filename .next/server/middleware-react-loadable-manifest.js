@@ -1,1 +1,0 @@
-self.__REACT_LOADABLE_MANIFEST="{\"components\\\\map\\\\MapWrapper.tsx -> ./SumselLeafletMap\":{\"id\":\"components\\\\map\\\\MapWrapper.tsx -> ./SumselLeafletMap\",\"files\":[\"static/css/_app-pages-browser_src_components_map_SumselLeafletMap_tsx.css\",\"static/chunks/_app-pages-browser_src_components_map_SumselLeafletMap_tsx.js\"]}}"
