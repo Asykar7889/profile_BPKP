@@ -17,6 +17,8 @@ interface DashboardContextType {
   activeTab: string;
   selectedYear: number;
   summary: ProvincialSummary;
+  isMainSidebarOpen: boolean;
+  isMobileSidebarOpen: boolean;
   setActiveCity: (city: RegionData | null) => void;
   setHoveredCity: (city: RegionData | null) => void;
   setIsHeatmapActive: (val: boolean | ((prev: boolean) => boolean)) => void;
@@ -24,6 +26,9 @@ interface DashboardContextType {
   setSearchQuery: (query: string) => void;
   setActiveTab: (tab: string) => void;
   setSelectedYear: (year: number) => void;
+  setIsMainSidebarOpen: (val: boolean | ((prev: boolean) => boolean)) => void;
+  setIsMobileSidebarOpen: (val: boolean | ((prev: boolean) => boolean)) => void;
+  toggleMainSidebar: () => void;
   resetToProvincial: () => void;
   downloadCsv: () => void;
 }
@@ -40,6 +45,11 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeTab, setActiveTab] = useState<string>('peta');
   const [selectedYear, setSelectedYear] = useState<number>(2026);
+  
+  // Desktop sidebar collapse toggle state (default: open on desktop)
+  const [isMainSidebarOpen, setIsMainSidebarOpen] = useState<boolean>(true);
+  // Mobile drawer state (default: closed on mobile)
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
 
   // Fetch Supabase data or use fallback
   useEffect(() => {
@@ -117,6 +127,10 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     };
   }, [regions]);
 
+  const toggleMainSidebar = () => {
+    setIsMainSidebarOpen((prev) => !prev);
+  };
+
   const resetToProvincial = () => {
     setActiveCity(null);
     setHoveredCity(null);
@@ -161,7 +175,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `SPI_Sumatera_Selatan_${selectedYear}_17_KabKota.csv`);
+    link.setAttribute('download', `SPI_Sumatera_Selatan_${selectedYear}_17_KabKota_BPKP.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -180,6 +194,8 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         activeTab,
         selectedYear,
         summary,
+        isMainSidebarOpen,
+        isMobileSidebarOpen,
         setActiveCity,
         setHoveredCity,
         setIsHeatmapActive,
@@ -187,6 +203,9 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         setSearchQuery,
         setActiveTab,
         setSelectedYear,
+        setIsMainSidebarOpen,
+        setIsMobileSidebarOpen,
+        toggleMainSidebar,
         resetToProvincial,
         downloadCsv,
       }}

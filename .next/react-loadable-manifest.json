@@ -1,10 +1,9 @@
 {
   "components\\map\\MapWrapper.tsx -> ./SumselLeafletMap": {
-    "id": 6416,
+    "id": "components\\map\\MapWrapper.tsx -> ./SumselLeafletMap",
     "files": [
-      "static/css/fc1c9daac70c093b.css",
-      "static/chunks/d0deef33.bd75b11a952a2d3d.js",
-      "static/chunks/416.ad033433297f0c80.js"
+      "static/css/_app-pages-browser_src_components_map_SumselLeafletMap_tsx.css",
+      "static/chunks/_app-pages-browser_src_components_map_SumselLeafletMap_tsx.js"
     ]
   }
 }

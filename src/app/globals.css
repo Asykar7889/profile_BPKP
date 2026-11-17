@@ -3,6 +3,9 @@
 @tailwind utilities;
 
 :root {
+  --bpkp-blue: #0000FE;
+  --bpkp-red: #FF0000;
+  --bpkp-black: #000000;
   --tier-default: #E2E8F0;
   --tier-terjaga: #15803D;
   --tier-terawasi: #4ADE80;
@@ -13,51 +16,112 @@
 
 body {
   color: #0F172A;
-  background: #F8FAFC;
+  background: #F9F9F9;
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
-/* Custom Leaflet Tooltip Overrides */
-.leaflet-tooltip.sumsel-glass-tooltip {
-  background: rgba(15, 23, 42, 0.92) !important;
-  backdrop-filter: blur(8px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  border-radius: 10px !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3) !important;
-  padding: 10px 14px !important;
-  color: #F8FAFC !important;
+/* Modern Vector Studio Canvas Background (Zero Watermarks, Zero External Tile Dependencies) */
+.leaflet-container {
+  background-color: #F8FAFC !important;
+  background-image: radial-gradient(#CBD5E1 1px, transparent 1px) !important;
+  background-size: 20px 20px !important;
   font-family: inherit !important;
+  outline: none !important;
+}
+
+/* Elevation Shadow matching reference map for South Sumatra province landmass */
+.leaflet-pane.leaflet-overlay-pane {
+  filter: drop-shadow(-10px 14px 18px rgba(15, 23, 42, 0.28)) !important;
+}
+
+/* Region Map Labels: Menempel di kota dengan warna sedikit blur (tidak melayang) */
+.region-map-label {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-family: inherit !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: #1E293B !important;
+  opacity: 0.75 !important;
+  text-align: center !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  white-space: nowrap !important;
+  letter-spacing: 0.02em !important;
+  text-shadow: none !important;
+  mix-blend-mode: multiply !important;
+  filter: blur(0.25px) !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  transition: opacity 250ms ease, visibility 250ms ease !important;
+}
+
+@media (min-width: 768px) {
+  .region-map-label {
+    font-size: 11px !important;
+  }
+}
+
+/* Saat zoom-out: sembunyikan nama setiap kota agar tidak menutupi gambar peta */
+.map-zoomed-out .region-map-label {
+  opacity: 0 !important;
+  visibility: hidden !important;
   pointer-events: none !important;
 }
 
-.leaflet-tooltip.sumsel-glass-tooltip::before {
-  border-top-color: rgba(15, 23, 42, 0.92) !important;
+/* Saat zoom-in: tampilkan nama kota menempel lembut di kota masing-masing */
+.map-zoomed-in .region-map-label {
+  opacity: 0.75 !important;
+  visibility: visible !important;
+}
+
+/* Prevent SVG polygon strokes from bloating or blurring during Leaflet flyToBounds / zoom animations */
+.leaflet-container svg.leaflet-zoom-animated path.leaflet-interactive,
+.leaflet-interactive {
+  vector-effect: non-scaling-stroke !important;
+  stroke-linejoin: round !important;
+  stroke-linecap: round !important;
+  shape-rendering: geometricPrecision !important;
+  outline: none !important;
+  filter: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  /* Only transition fill-opacity, NEVER transition stroke-width or all during zoom */
+  transition: fill 150ms ease, fill-opacity 150ms ease !important;
+}
+
+/* Remove any GPU bitmap blur on the SVG pane during zoom transitions */
+.leaflet-pane > svg {
+  will-change: auto !important;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Leaflet Zoom control styling */
 .leaflet-bar {
-  border: 1px solid #E2E8F0 !important;
-  border-radius: 8px !important;
+  border: 1px solid #DCDCFF !important;
+  border-radius: 10px !important;
   overflow: hidden !important;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 254, 0.08) !important;
 }
 
 .leaflet-bar a {
   background-color: #FFFFFF !important;
-  color: #334155 !important;
-  border-bottom: 1px solid #E2E8F0 !important;
+  color: #0000FE !important;
+  border-bottom: 1px solid #EDEDFF !important;
   transition: all 0.2s ease !important;
 }
 
 .leaflet-bar a:hover {
-  background-color: #F1F5F9 !important;
-  color: #0F172A !important;
+  background-color: #EDEDFF !important;
+  color: #1A1AFE !important;
 }
 
 /* Smooth custom scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -70,5 +134,5 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background: #0000FE;
 }
