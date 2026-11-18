@@ -3,80 +3,89 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { useDashboard } from '@/context/DashboardContext';
+import { useSpiDashboard } from '@/context/SpiDashboardContext';
 import { SUMSEL_GEOJSON } from '@/data/sumselGeoJson';
 import {
   DEFAULT_MAP_FILL,
   DEFAULT_MAP_STROKE,
   HOVER_MAP_STROKE,
   getTierByScore,
-} from '@/lib/scoringUtils';
-import { RegionData } from '@/types/dashboard';
+  formatScore,
+} from '@/lib/scoringEngine';
+import { CitySurvey } from '@/types/spi';
+import InteractiveLegendCards from './InteractiveLegendCards';
+import InMapRiskSidebar from './InMapRiskSidebar';
+import { Layers, Eye, EyeOff } from 'lucide-react';
 
 export default function SumselLeafletMap() {
   const mapRef = useRef<L.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const geoJsonLayerRef = useRef<L.GeoJSON | null>(null);
   const labelsLayerRef = useRef<L.LayerGroup | null>(null);
+  const labelMarkersRef = useRef<Map<string, L.Marker>>(new Map());
   const hasInitializedRef = useRef(false);
   const prevActiveKodeRef = useRef<string | null>(null);
 
   const {
-    regions,
+    surveys,
     activeCity,
     hoveredCity,
     isHeatmapActive,
     selectedTierFilter,
-    isMainSidebarOpen,
+    hoveredTierFilter,
+    toggleHeatmap,
     setActiveCity,
     setHoveredCity,
-  } = useDashboard();
+  } = useSpiDashboard();
 
-  // Create region lookup map for O(1) matching
-  const regionMap = React.useMemo(() => {
-    const map = new Map<string, RegionData>();
-    regions.forEach((r) => {
-      map.set(r.kode_wilayah, r);
-    });
-    return map;
-  }, [regions]);
-
-  // Keep a mutable ref so Leaflet event listeners always read latest region data
-  const regionMapRef = useRef(regionMap);
+  const activeCityRef = useRef(activeCity);
   useEffect(() => {
-    regionMapRef.current = regionMap;
-  }, [regionMap]);
+    activeCityRef.current = activeCity;
+  }, [activeCity]);
 
-  // Dynamic Polygon Styling Function based on state machine (Clean, crisp, non-bloating border weight)
+  // Create fast O(1) lookup map for 17 Kab/Kota
+  const surveyMap = React.useMemo(() => {
+    const map = new Map<string, CitySurvey>();
+    surveys.forEach((s) => map.set(s.kode_wilayah, s));
+    return map;
+  }, [surveys]);
+
+  const surveyMapRef = useRef(surveyMap);
+  useEffect(() => {
+    surveyMapRef.current = surveyMap;
+  }, [surveyMap]);
+
+  // Dynamic Polygon Styling Function
   const getFeatureStyle = useCallback(
     (feature?: any): L.PathOptions => {
       if (!feature || !feature.properties) return {};
       const kode = feature.properties.kode_wilayah;
-      const region = regionMap.get(kode);
+      const city = surveyMap.get(kode);
 
-      if (!region) {
+      if (!city) {
         return {
           fillColor: DEFAULT_MAP_FILL,
-          fillOpacity: 0.6,
+          fillOpacity: 0.85,
           color: DEFAULT_MAP_STROKE,
-          weight: 1.25,
+          weight: 1.5,
           lineJoin: 'round',
           lineCap: 'round',
         };
       }
 
-      const tier = getTierByScore(Number(region.skor_total));
+      const tier = getTierByScore(Number(city.skor_total));
       const isSelected = activeCity?.kode_wilayah === kode;
       const isHovered = hoveredCity?.kode_wilayah === kode;
 
-      // 1. If Legend / Tier Filter is active
-      if (selectedTierFilter) {
-        if (tier.key === selectedTierFilter) {
+      // 1. Tier Filter Active (Click or Hover on Legend Cards)
+      const effectiveTierFilter = selectedTierFilter || hoveredTierFilter;
+      if (effectiveTierFilter) {
+        if (tier.key === effectiveTierFilter) {
           return {
             fillColor: tier.hex,
-            fillOpacity: isHovered || isSelected ? 1.0 : 0.9,
-            color: isSelected ? '#0000FE' : '#0F172A',
-            weight: isSelected || isHovered ? 2 : 1.25,
+            fillOpacity: isHovered || isSelected ? 1.0 : 0.90,
+            color: isSelected ? '#0000FE' : HOVER_MAP_STROKE,
+            weight: isSelected || isHovered ? 2.5 : 1.75,
             lineJoin: 'round',
             lineCap: 'round',
           };
@@ -85,51 +94,51 @@ export default function SumselLeafletMap() {
             fillColor: DEFAULT_MAP_FILL,
             fillOpacity: 0.15,
             color: '#CBD5E1',
-            weight: 1,
+            weight: 1.0,
             lineJoin: 'round',
             lineCap: 'round',
           };
         }
       }
 
-      // 2. If Heatmap is Active (Show all colors)
+      // 2. Heatmap ON (Show all 5-tier colors simultaneously)
       if (isHeatmapActive) {
         return {
           fillColor: tier.hex,
           fillOpacity: isHovered || isSelected ? 1.0 : 0.82,
           color: isSelected ? '#0000FE' : isHovered ? HOVER_MAP_STROKE : '#FFFFFF',
-          weight: isSelected || isHovered ? 2 : 1.25,
+          weight: isSelected || isHovered ? 2.5 : 1.5,
           lineJoin: 'round',
           lineCap: 'round',
         };
       }
 
-      // 3. Default Neutral Mode (Heatmap OFF) -> ONLY reveal color on hovered or active city
+      // 3. Default Mode (Heatmap OFF) -> ONLY highlight hovered or clicked city
       if (isHovered || isSelected) {
         return {
           fillColor: tier.hex,
           fillOpacity: 0.95,
           color: isSelected ? '#0000FE' : HOVER_MAP_STROKE,
-          weight: 2,
+          weight: 2.5,
           lineJoin: 'round',
           lineCap: 'round',
         };
       }
 
-      // Initial Neutral Grey State
+      // Default Neutral State
       return {
         fillColor: DEFAULT_MAP_FILL,
-        fillOpacity: 0.85,
+        fillOpacity: 0.88,
         color: DEFAULT_MAP_STROKE,
-        weight: 1.25,
+        weight: 1.5,
         lineJoin: 'round',
         lineCap: 'round',
       };
     },
-    [regionMap, activeCity, hoveredCity, isHeatmapActive, selectedTierFilter]
+    [surveyMap, activeCity, hoveredCity, isHeatmapActive, selectedTierFilter, hoveredTierFilter]
   );
 
-  // Initialize Map with Vector Studio Canvas (Zero watermarks)
+  // Initialize Map Instance
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
@@ -142,10 +151,9 @@ export default function SumselLeafletMap() {
       attributionControl: false,
     });
 
-    // Zoom control placed at bottomright to prevent collision with In-Map Sidebar
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // Zoom LOD: Update zoom classes to show/hide city labels dynamically
+    // Zoom LOD: Auto hide labels when zoomed out, show when zoomed in
     const updateZoomClasses = () => {
       if (containerRef.current) {
         const zoom = map.getZoom();
@@ -156,6 +164,18 @@ export default function SumselLeafletMap() {
           containerRef.current.classList.remove('map-zoomed-out');
           containerRef.current.classList.add('map-zoomed-in');
         }
+
+        // Re-affirm active region label class if Leaflet refreshed the DOM during zoom
+        const currentActiveKode = activeCityRef.current?.kode_wilayah
+          ? String(activeCityRef.current.kode_wilayah)
+          : null;
+        if (currentActiveKode) {
+          const activeMarker = labelMarkersRef.current.get(currentActiveKode);
+          const el = activeMarker?.getElement();
+          if (el) {
+            el.classList.add('is-active-label');
+          }
+        }
       }
     };
 
@@ -163,9 +183,8 @@ export default function SumselLeafletMap() {
     map.on('zoomend', updateZoomClasses);
     updateZoomClasses();
 
-    // Click on empty canvas resets active city
+    // Click on empty canvas does not lose selection unless intended
     map.on('click', () => {
-      setActiveCity(null);
       setHoveredCity(null);
     });
 
@@ -177,9 +196,9 @@ export default function SumselLeafletMap() {
       hasInitializedRef.current = false;
       prevActiveKodeRef.current = null;
     };
-  }, [setActiveCity, setHoveredCity]);
+  }, [setHoveredCity]);
 
-  // Initialize GeoJSON layer and Labels layer ONCE (Never destroy/recreate on hover or style changes)
+  // Mount GeoJSON Layer ONCE
   useEffect(() => {
     if (!mapRef.current || hasInitializedRef.current) return;
 
@@ -187,18 +206,55 @@ export default function SumselLeafletMap() {
       style: getFeatureStyle,
       onEachFeature: (feature, layer) => {
         const kode = feature.properties?.kode_wilayah;
+        const initialCity = surveyMapRef.current.get(kode);
+
+        // Crisp Tooltip for ONLY the hovered city
+        if (initialCity) {
+          const tier = getTierByScore(initialCity.skor_total);
+          layer.bindTooltip(
+            `
+            <div class="px-2 py-1.5 flex flex-col gap-0.5 text-left font-sans">
+              <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">${initialCity.tipe_wilayah}</span>
+              <strong class="text-xs font-black text-slate-900">${initialCity.nama_wilayah}</strong>
+              <div class="flex items-center gap-1.5 mt-1">
+                <span class="text-sm font-black font-mono text-slate-800">${formatScore(initialCity.skor_total)}</span>
+                <span class="px-1.5 py-0.2 rounded-full text-[9px] font-black" style="background-color: ${tier.hex}22; color: ${tier.hex}">${tier.label}</span>
+              </div>
+            </div>
+            `,
+            {
+              sticky: true,
+              direction: 'top',
+              className: 'custom-map-tooltip',
+              opacity: 1,
+            }
+          );
+        }
 
         layer.on({
           mouseover: (e) => {
-            // Only fire hover style on desktop mouse devices (prevents synthetic tap-hover flash on mobile)
             if (typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches) {
-              const region = regionMapRef.current.get(kode);
-              if (region) {
-                setHoveredCity(region);
+              const current = surveyMapRef.current.get(kode);
+              if (current) {
+                setHoveredCity(current);
+                // Update tooltip content dynamically in case score updated
+                const t = getTierByScore(current.skor_total);
+                layer.setTooltipContent(
+                  `
+                  <div class="px-2 py-1.5 flex flex-col gap-0.5 text-left font-sans">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">${current.tipe_wilayah}</span>
+                    <strong class="text-xs font-black text-slate-900">${current.nama_wilayah}</strong>
+                    <div class="flex items-center gap-1.5 mt-1">
+                      <span class="text-sm font-black font-mono text-slate-800">${formatScore(current.skor_total)}</span>
+                      <span class="px-1.5 py-0.2 rounded-full text-[9px] font-black" style="background-color: ${t.hex}22; color: ${t.hex}">${t.label}</span>
+                    </div>
+                  </div>
+                  `
+                );
               }
               const l = e.target as L.Path;
               l.setStyle({
-                weight: 2,
+                weight: 2.5,
                 color: HOVER_MAP_STROKE,
                 lineJoin: 'round',
                 lineCap: 'round',
@@ -208,16 +264,14 @@ export default function SumselLeafletMap() {
           },
           mouseout: () => {
             if (typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches) {
-              // Simply clear hoveredCity -> reactive setStyle effect handles restoring proper styles
-              // without wiping activeCity selection or triggering camera movement
               setHoveredCity(null);
             }
           },
           click: (e) => {
             L.DomEvent.stopPropagation(e);
-            const region = regionMapRef.current.get(kode);
-            if (region) {
-              setActiveCity(region);
+            const current = surveyMapRef.current.get(kode);
+            if (current) {
+              setActiveCity(current);
             }
           },
         });
@@ -227,32 +281,55 @@ export default function SumselLeafletMap() {
     geoLayer.addTo(mapRef.current);
     geoJsonLayerRef.current = geoLayer;
 
-    // Render crisp region name labels matching reference map
+    // Attach Labels to Overlay Pane with dynamic single-region / all-region visibility
+    if (labelsLayerRef.current) {
+      labelsLayerRef.current.remove();
+    }
+    labelMarkersRef.current.clear();
     const labelsGroup = L.layerGroup();
+    const activeKode = activeCityRef.current?.kode_wilayah ? String(activeCityRef.current.kode_wilayah) : null;
+
     geoLayer.eachLayer((l: any) => {
       if (l.feature?.properties?.nama_wilayah && typeof l.getBounds === 'function') {
         const rawName: string = l.feature.properties.nama_wilayah;
-        const cleanName = rawName
+        const kode: string = String(l.feature.properties.kode_wilayah);
+        let cleanName = rawName
           .replace(/^Kabupaten\s+/i, '')
           .replace(/^Kota\s+/i, '')
           .trim();
-        const center = l.getBounds().getCenter();
+
+        if (/ogan komering ulu timur/i.test(cleanName)) cleanName = 'OKU Timur';
+        else if (/ogan komering ulu selatan/i.test(cleanName)) cleanName = 'OKU Selatan';
+        else if (/ogan komering ulu/i.test(cleanName)) cleanName = 'OKU';
+        else if (/penukal abab/i.test(cleanName)) cleanName = 'PALI';
+        else if (/lubuk linggau/i.test(cleanName)) cleanName = 'Lubuklinggau';
+
+        let center = l.getBounds().getCenter();
+        if (kode === '1607') center = L.latLng(-2.55, 104.55); // Banyuasin northern mainland
+        else if (kode === '1603') center = L.latLng(-3.72, 103.85); // Muara Enim center
+
+        const isCurrentlyActive = activeKode !== null && activeKode === kode;
+
         const marker = L.marker(center, {
+          pane: 'overlayPane',
           icon: L.divIcon({
-            className: 'region-map-label',
-            html: `<span>${cleanName}</span>`,
+            className: `region-map-label region-label-${kode}${isCurrentlyActive ? ' is-active-label' : ''}`,
+            html: `<span class="region-label-text">${cleanName}</span>`,
             iconSize: [100, 20],
             iconAnchor: [50, 10],
           }),
           interactive: false,
+          zIndexOffset: isCurrentlyActive ? 1000 : 0,
         });
+
         labelsGroup.addLayer(marker);
+        labelMarkersRef.current.set(kode, marker);
       }
     });
     labelsGroup.addTo(mapRef.current);
     labelsLayerRef.current = labelsGroup;
 
-    // Initial camera fitBounds to South Sumatra bounds ONCE on mount
+    // Initial fit bounds ONCE
     if (geoLayer.getBounds().isValid()) {
       const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
       mapRef.current.fitBounds(geoLayer.getBounds(), {
@@ -264,15 +341,36 @@ export default function SumselLeafletMap() {
     hasInitializedRef.current = true;
   }, [getFeatureStyle, setActiveCity, setHoveredCity]);
 
-  // Synchronize dynamic styles when state changes without re-creating layer
+  // Synchronize dynamic active region label visibility
+  useEffect(() => {
+    const activeKode = activeCity?.kode_wilayah ? String(activeCity.kode_wilayah) : null;
+
+    labelMarkersRef.current.forEach((marker, kode) => {
+      const el = marker.getElement();
+      const isSelected = activeKode !== null && kode === activeKode;
+
+      if (el) {
+        if (isSelected) {
+          el.classList.add('is-active-label');
+        } else {
+          el.classList.remove('is-active-label');
+        }
+      }
+
+      if (typeof marker.setZIndexOffset === 'function') {
+        marker.setZIndexOffset(isSelected ? 1000 : 0);
+      }
+    });
+  }, [activeCity]);
+
+  // Synchronize styles when state changes without destroying DOM layers
   useEffect(() => {
     if (geoJsonLayerRef.current) {
       geoJsonLayerRef.current.setStyle(getFeatureStyle);
     }
   }, [getFeatureStyle]);
 
-  // Dedicated Map Camera Controller: ONLY responds to activeCity changes
-  // NEVER moves or resets camera when cursor hovers or leaves into white space
+  // Camera Controller: Lock zoom on activeCity only (Never reset on mouseout/hover)
   useEffect(() => {
     if (!mapRef.current || !geoJsonLayerRef.current) return;
 
@@ -283,20 +381,19 @@ export default function SumselLeafletMap() {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
     if (activeCity) {
-      // Zoom into selected active city
       geoJsonLayerRef.current.eachLayer((layer: any) => {
         const kode = layer.feature?.properties?.kode_wilayah;
         if (String(kode) === String(activeCity.kode_wilayah) && typeof layer.getBounds === 'function') {
           mapRef.current?.flyToBounds(layer.getBounds(), {
             paddingTopLeft: [24, 60],
             paddingBottomRight: [24, isMobile ? 100 : 24],
-            maxZoom: 9,      // Prevents extreme zoom magnification that bloats vector outline
-            duration: 0.35,  // Fast, crisp transition without lingering scaling blur
+            maxZoom: 9,
+            duration: 0.35,
           });
         }
       });
     } else if (hasInitializedRef.current) {
-      // User explicitly deselected or clicked Reset -> return to full South Sumatra province view
+      // User clicked "Reset ke Provinsi Sumsel"
       const bounds = geoJsonLayerRef.current.getBounds();
       if (bounds.isValid()) {
         mapRef.current.flyToBounds(bounds, {
@@ -308,28 +405,32 @@ export default function SumselLeafletMap() {
     }
   }, [activeCity]);
 
-  // Handle ResizeObserver / Main Sidebar Collapse to invalidate Leaflet map size smoothly
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (mapRef.current) {
-        mapRef.current.invalidateSize();
-        // Only fit provincial bounds if no city is currently active
-        if (!activeCity && geoJsonLayerRef.current && geoJsonLayerRef.current.getBounds().isValid()) {
-          const isMobile = window.innerWidth < 768;
-          mapRef.current.fitBounds(geoJsonLayerRef.current.getBounds(), {
-            padding: isMobile ? [20, 20] : [35, 35],
-            maxZoom: 9,
-          });
-        }
-      }
-    }, 320);
-
-    return () => clearTimeout(timer);
-  }, [isMainSidebarOpen, activeCity]);
-
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full rounded-2xl overflow-hidden border border-slate-200/90 shadow-sm bg-white isolate z-10">
+      {/* 1. In-Map Risk Sidebar / Pop-up Panel Tingkat Risiko SPI */}
+      <InMapRiskSidebar />
+
+      {/* 2. Top-Right Heatmap Toggle Button */}
+      <div className="absolute top-3.5 right-4 z-[400] flex items-center gap-2">
+        <button
+          onClick={toggleHeatmap}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-sm backdrop-blur-md ${
+            isHeatmapActive
+              ? 'bg-slate-900 text-white border-slate-900'
+              : 'bg-white/95 text-slate-700 border-slate-200 hover:bg-white'
+          }`}
+          title="Tampilkan warna skor 5-tier pada seluruh kota sekaligus"
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>{isHeatmapActive ? 'Heatmap: Aktif' : 'Tampilkan Warna Semua Kota'}</span>
+        </button>
+      </div>
+
+      {/* 3. Core Map Canvas */}
       <div ref={containerRef} className="w-full h-full z-0 outline-none" />
+
+      {/* 4. Bottom 5-Card Interactive Legend Filter */}
+      <InteractiveLegendCards />
     </div>
   );
 }

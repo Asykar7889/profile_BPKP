@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useDashboard } from '@/context/DashboardContext';
+import { useSpiDashboard } from '@/context/SpiDashboardContext';
 import { RISK_TIERS, formatScore, formatNumber, getTierByScore } from '@/lib/scoringUtils';
 import { RiskTierKey, RegionData } from '@/types/dashboard';
 import {
@@ -21,19 +22,86 @@ import {
 } from 'lucide-react';
 
 export default function InMapRiskSidebar() {
-  const {
-    regions,
-    summary,
-    selectedTierFilter,
-    setSelectedTierFilter,
-    isHeatmapActive,
-    setIsHeatmapActive,
-    activeCity,
-    hoveredCity,
-    isMobileSidebarOpen,
-    setActiveCity,
-    resetToProvincial,
-  } = useDashboard();
+  const dashCtx = useDashboard();
+  let spiCtx: ReturnType<typeof useSpiDashboard> | null = null;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    spiCtx = useSpiDashboard();
+  } catch {}
+
+  // Effective regions derived from live SPI surveys if present, falling back to dashCtx
+  const regions: RegionData[] = useMemo(() => {
+    if (spiCtx && spiCtx.surveys.length > 0) {
+      return spiCtx.surveys.map((s) => {
+        const internal = s.dimensions.find((d) => d.kode_dimensi === 'internal')?.skor_dimensi || 0;
+        const eksternal = s.dimensions.find((d) => d.kode_dimensi === 'eksternal')?.skor_dimensi || 0;
+        const eksper = s.dimensions.find((d) => d.kode_dimensi === 'eksper')?.skor_dimensi || 0;
+        const koreksi = s.dimensions.find((d) => d.kode_dimensi === 'faktor_koreksi')?.skor_dimensi || 0;
+        const fallbackMatch = dashCtx.regions.find((r) => r.kode_wilayah === s.kode_wilayah);
+
+        return {
+          id: s.id,
+          kode_wilayah: s.kode_wilayah,
+          nama_wilayah: s.nama_wilayah,
+          tipe_wilayah: s.tipe_wilayah,
+          skor_total: s.skor_total,
+          kategori_risiko: s.kategori_risiko,
+          indikator_internal: internal,
+          indikator_eksternal: eksternal,
+          indikator_eksper: eksper,
+          faktor_koreksi: koreksi,
+          jumlah_responden: s.jumlah_responden,
+          tahun: s.tahun,
+          rekomendasi_utama:
+            fallbackMatch?.rekomendasi_utama ||
+            'Tingkatkan kepatuhan tata kelola, pengawasan pengadaan barang/jasa, dan implementasi SPIP terintegrasi.',
+        };
+      });
+    }
+    return dashCtx.regions;
+  }, [spiCtx?.surveys, dashCtx.regions]);
+
+  const selectedTierFilter = spiCtx ? spiCtx.selectedTierFilter : dashCtx.selectedTierFilter;
+  const isHeatmapActive = spiCtx ? spiCtx.isHeatmapActive : dashCtx.isHeatmapActive;
+
+  const activeCity: RegionData | null = useMemo(() => {
+    if (spiCtx?.activeCity) {
+      return regions.find((r) => r.kode_wilayah === spiCtx.activeCity?.kode_wilayah) || null;
+    }
+    return dashCtx.activeCity;
+  }, [spiCtx?.activeCity, dashCtx.activeCity, regions]);
+
+  const hoveredCity: RegionData | null = useMemo(() => {
+    if (spiCtx?.hoveredCity) {
+      return regions.find((r) => r.kode_wilayah === spiCtx.hoveredCity?.kode_wilayah) || null;
+    }
+    return dashCtx.hoveredCity;
+  }, [spiCtx?.hoveredCity, dashCtx.hoveredCity, regions]);
+
+  const isMobileSidebarOpen = dashCtx.isMobileSidebarOpen;
+
+  const handleSelectCity = (city: RegionData) => {
+    dashCtx.setActiveCity(city);
+    if (spiCtx) {
+      const sCity = spiCtx.surveys.find((s) => s.kode_wilayah === city.kode_wilayah);
+      if (sCity) spiCtx.setActiveCity(sCity);
+    }
+  };
+
+  const handleResetToProvincial = () => {
+    dashCtx.resetToProvincial();
+    spiCtx?.resetToProvince();
+  };
+
+  const handleSetTierFilter = (key: RiskTierKey | null) => {
+    dashCtx.setSelectedTierFilter(key);
+    spiCtx?.setSelectedTierFilter(key);
+  };
+
+  const handleToggleHeatmap = () => {
+    dashCtx.setIsHeatmapActive((prev) => !prev);
+    spiCtx?.toggleHeatmap();
+  };
 
   // Desktop (>= 768px): default open | Mobile (< 768px): default CLOSED
   const [isOpen, setIsOpen] = useState(false);
@@ -64,9 +132,9 @@ export default function InMapRiskSidebar() {
 
   const handleTierClick = (key: RiskTierKey) => {
     if (selectedTierFilter === key) {
-      setSelectedTierFilter(null);
+      handleSetTierFilter(null);
     } else {
-      setSelectedTierFilter(key);
+      handleSetTierFilter(key);
     }
   };
 
@@ -104,19 +172,16 @@ export default function InMapRiskSidebar() {
             e.stopPropagation();
             setIsOpen(true);
           }}
-          className={`absolute top-3 left-3 z-[500] flex items-center gap-2 px-3 py-2 bg-white/95 backdrop-blur-md border border-bpkp-blueBorder rounded-xl shadow-lg hover:bg-bpkp-blueSoft text-bpkp-black text-xs font-bold transition-all hover:scale-105 active:scale-95 ${
+          className={`group absolute top-3 left-3 z-[500] flex items-center gap-2 px-3 py-2 bg-white/95 backdrop-blur-md border border-bpkp-blueBorder rounded-xl shadow-md hover:bg-bpkp-blueSoft text-bpkp-black text-xs font-bold transition-all hover:scale-105 active:scale-95 ${
             isMobileSidebarOpen ? 'pointer-events-none opacity-0' : 'opacity-100'
           }`}
           title="Buka Menu Tingkat Risiko SPI"
         >
-          <div className="w-5 h-5 rounded-md bg-bpkp-blue text-white flex items-center justify-center flex-shrink-0">
+          <div className="w-5 h-5 rounded-md bg-bpkp-blue text-white flex items-center justify-center flex-shrink-0 shadow-2xs">
             <Layers className="w-3.5 h-3.5" />
           </div>
-          <span className="text-bpkp-blue font-bold">Tingkat Risiko SPI</span>
-          <span className="inline-block px-1.5 py-0.2 rounded bg-bpkp-blueSoft text-bpkp-blue text-[10px] font-mono">
-            {formatScore(summary.rataRataSkor)}
-          </span>
-          <ChevronRight className="w-4 h-4 text-bpkp-blue" />
+          <span className="text-bpkp-blue font-bold tracking-tight">Tingkat Risiko SPI</span>
+          <ChevronRight className="w-4 h-4 text-bpkp-blue transition-transform group-hover:translate-x-0.5" />
         </button>
       )}
 
@@ -237,7 +302,7 @@ export default function InMapRiskSidebar() {
                     <span className="text-[11px] font-bold text-slate-800">Tampilkan Warna Semua Kota</span>
                   </div>
                   <button
-                    onClick={() => setIsHeatmapActive((prev) => !prev)}
+                    onClick={handleToggleHeatmap}
                     className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                       isHeatmapActive ? 'bg-bpkp-red' : 'bg-slate-200'
                     }`}
@@ -262,7 +327,7 @@ export default function InMapRiskSidebar() {
                   <span>5 Tingkat Risiko Integritas</span>
                   {selectedTierFilter && (
                     <button
-                      onClick={() => setSelectedTierFilter(null)}
+                      onClick={() => handleSetTierFilter(null)}
                       className="text-bpkp-blue hover:underline normal-case font-semibold flex items-center gap-0.5"
                     >
                       <X className="w-3 h-3" />
@@ -335,7 +400,7 @@ export default function InMapRiskSidebar() {
                                 key={city.kode_wilayah}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setActiveCity(city);
+                                  handleSelectCity(city);
                                   setActiveTab('detail');
                                 }}
                                 className="px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 flex items-center justify-between text-xs cursor-pointer transition"
@@ -452,7 +517,7 @@ export default function InMapRiskSidebar() {
                   {/* Action Reset Button */}
                   {activeCity && (
                     <button
-                      onClick={resetToProvincial}
+                      onClick={handleResetToProvincial}
                       className="w-full py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 min-h-[40px]"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />

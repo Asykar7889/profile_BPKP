@@ -43,7 +43,8 @@ body {
   font-size: 10px !important;
   font-weight: 600 !important;
   color: #1E293B !important;
-  opacity: 0.75 !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
   text-align: center !important;
   pointer-events: none !important;
   user-select: none !important;
@@ -55,7 +56,7 @@ body {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  transition: opacity 250ms ease, visibility 250ms ease !important;
+  transition: opacity 200ms ease, visibility 200ms ease, transform 150ms ease !important;
 }
 
 @media (min-width: 768px) {
@@ -64,17 +65,44 @@ body {
   }
 }
 
-/* Saat zoom-out: sembunyikan nama setiap kota agar tidak menutupi gambar peta */
-.map-zoomed-out .region-map-label {
-  opacity: 0 !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-}
-
-/* Saat zoom-in: tampilkan nama kota menempel lembut di kota masing-masing */
+/* 1. Zoomed-In View (>= 8.2): Tampilkan semua nama kota menempel lembut di kota masing-masing */
 .map-zoomed-in .region-map-label {
   opacity: 0.75 !important;
   visibility: visible !important;
+}
+
+/* 2. Zoomed-Out View (< 8.2): Sembunyikan nama kota unselected agar tidak menutupi kanvas */
+.map-zoomed-out .region-map-label {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* 3. Single Selection (Active Region): SELALU terlihat pada zoom-out maupun zoom-in */
+.region-map-label.is-active-label,
+.map-zoomed-out .region-map-label.is-active-label,
+.map-zoomed-in .region-map-label.is-active-label {
+  opacity: 1 !important;
+  visibility: visible !important;
+  font-weight: 800 !important;
+  color: #0F172A !important;
+  filter: none !important;
+  z-index: 1000 !important;
+  mix-blend-mode: normal !important;
+}
+
+.region-label-text {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.is-active-label .region-label-text {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(2, 132, 199, 0.45);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  color: #0F172A;
+  font-weight: 800;
 }
 
 /* Prevent SVG polygon strokes from bloating or blurring during Leaflet flyToBounds / zoom animations */

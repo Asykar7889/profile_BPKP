@@ -36,8 +36,16 @@ export const isSupabaseConfigured: boolean = Boolean(
 );
 
 // Inisialisasi client yang 100% aman (fail-safe) untuk SSR / SSG di Vercel
-// Selalu dijamin menggunakan valid HTTP/HTTPS URL sehingga createClient tidak pernah melempar error
-export const supabase: SupabaseClient = createClient(
-  isSupabaseConfigured ? formattedUrl : 'https://placeholder.supabase.co',
-  isSupabaseConfigured ? sanitizedAnonKey : 'placeholder-anon-key'
-);
+// Selalu dijamin menggunakan valid HTTP/HTTPS URL dengan pelindung try-catch sehingga createClient tidak pernah melempar error
+function createSafeSupabaseClient(): SupabaseClient {
+  try {
+    const targetUrl = isSupabaseConfigured ? formattedUrl : 'https://placeholder.supabase.co';
+    const targetKey = isSupabaseConfigured ? sanitizedAnonKey : 'placeholder-anon-key';
+    return createClient(targetUrl, targetKey);
+  } catch (err) {
+    console.warn('[SupabaseClient] Warning: Failed to initialize configured Supabase client, using fallback placeholder:', err);
+    return createClient('https://placeholder.supabase.co', 'placeholder-anon-key');
+  }
+}
+
+export const supabase: SupabaseClient = createSafeSupabaseClient();
