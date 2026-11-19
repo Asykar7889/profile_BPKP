@@ -1,4 +1,10 @@
 import { RiskTierKey, TierInfo } from '@/types/dashboard';
+import {
+  DEFAULT_RISK_THRESHOLDS,
+  getRiskTier,
+  RiskThreshold,
+  getContrastTextColor,
+} from './riskThresholds';
 
 export const RISK_TIERS: Record<RiskTierKey, TierInfo> = {
   terjaga: {
@@ -67,12 +73,25 @@ export const DEFAULT_MAP_FILL = '#E2E8F0'; // Slate 200
 export const DEFAULT_MAP_STROKE = '#FFFFFF';
 export const HOVER_MAP_STROKE = '#1E293B'; // Slate 800
 
-export function getTierByScore(score: number): TierInfo {
-  if (score >= 80.00) return RISK_TIERS.terjaga;
-  if (score >= 60.00) return RISK_TIERS.terawasi;
-  if (score >= 40.00) return RISK_TIERS.waspada;
-  if (score >= 20.00) return RISK_TIERS.rawan;
-  return RISK_TIERS.rentan;
+export function getTierByScore(
+  score: number,
+  customThresholds: RiskThreshold[] = DEFAULT_RISK_THRESHOLDS
+): TierInfo {
+  const matched = getRiskTier(score, customThresholds);
+  const textContrast = getContrastTextColor(matched.color_hex);
+
+  return {
+    key: matched.tier_key,
+    label: matched.label,
+    minScore: matched.min_score,
+    maxScore: matched.max_score,
+    hex: matched.color_hex,
+    bgClass: '',
+    textClass: textContrast === '#FFFFFF' ? 'text-white' : 'text-slate-900',
+    borderClass: '',
+    badgeClass: '',
+    description: `Kategori ${matched.label}`,
+  };
 }
 
 export function getTierColor(score: number): string {

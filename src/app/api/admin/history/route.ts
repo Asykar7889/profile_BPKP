@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { getTierByScore, roundTo2Decimals } from '@/lib/scoringEngine';
 
+export const dynamic = 'force-dynamic';
+
 // GET: Fetch all audit logs chronologically
 export async function GET() {
   try {
@@ -29,7 +31,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { action, log_id, override_score, override_delta, override_reasoning } = body;
+    const { action, log_id, override_score, override_notes } = body;
 
     if (!log_id || !action || !['EDIT', 'REVERT'].includes(action)) {
       return NextResponse.json(
@@ -50,20 +52,26 @@ export async function POST(req: NextRequest) {
         targetLog = data;
       }
 
-      const restoredScore = roundTo2Decimals(Number(targetLog?.old_score ?? 60.0));
+      const rawOldScore = targetLog?.skor_lama ?? targetLog?.old_score ?? 60.0;
+      const restoredScore = roundTo2Decimals(Number(rawOldScore));
       const restoredTier = getTierByScore(restoredScore);
 
       if (isSupabaseConfigured && supabase && targetLog) {
+        const targetCityCode = targetLog.kode_wilayah || targetLog.city_code;
+        const targetYear = targetLog.tahun || targetLog.year;
+
         // A. Restore city_surveys
         await supabase
           .from('city_surveys')
           .update({
             total_score: restoredScore,
+            skor_total: restoredScore,
             risk_category: restoredTier.label,
+            kategori_risiko: restoredTier.label,
             updated_at: new Date().toISOString(),
           })
-          .eq('city_code', targetLog.city_code)
-          .eq('year', targetLog.year);
+          .eq('city_code', targetCityCode)
+          .eq('year', targetYear);
 
         // B. Mark log as reverted
         await supabase
@@ -109,26 +117,29 @@ export async function POST(req: NextRequest) {
       }
 
       if (isSupabaseConfigured && supabase && targetLog) {
+        const targetCityCode = targetLog.kode_wilayah || targetLog.city_code;
+        const targetYear = targetLog.tahun || targetLog.year;
+
         // A. Update city_surveys
         await supabase
           .from('city_surveys')
           .update({
             total_score: clampedScore,
+            skor_total: clampedScore,
             risk_category: newTier.label,
+            kategori_risiko: newTier.label,
             updated_at: new Date().toISOString(),
           })
-          .eq('city_code', targetLog.city_code)
-          .eq('year', targetLog.year);
+          .eq('city_code', targetCityCode)
+          .eq('year', targetYear);
 
         // B. Mark log as edited with updated score
         await supabase
           .from('input_history_logs')
           .update({
             new_score: clampedScore,
-            delta_score: roundTo2Decimals(clampedScore - Number(targetLog.old_score)),
-            ai_reasoning: override_reasoning
-              ? `[Koreksi Admin] ${override_reasoning}`
-              : targetLog.ai_reasoning,
+            skor_baru: clampedScore,
+            kategori_baru: newTier.label,
             status: 'edited',
             action_type: 'EDIT_ADMIN',
           })

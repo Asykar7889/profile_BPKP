@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useDashboard } from '@/context/DashboardContext';
 import BpkpLogo from '@/components/common/BpkpLogo';
 import {
@@ -16,6 +18,7 @@ import {
 } from 'lucide-react';
 
 export default function Sidebar() {
+  const pathname = usePathname();
   const {
     activeTab,
     setActiveTab,
@@ -28,12 +31,12 @@ export default function Sidebar() {
 
   // Menu navigasi utama aplikasi
   const navItems = [
-    { id: 'peta', label: 'Peta Utama SPI', icon: Map },
-    { id: 'wilayah', label: 'Hasil Wilayah', icon: Building2 },
-    { id: 'tabulasi', label: 'Tabulasi Instansi', icon: FileSpreadsheet },
-    { id: 'profil_umum', label: 'Profil Umum BPKP', icon: Building2 },
-    { id: 'historis', label: 'Data Historis', icon: History },
-    { id: 'tindak_lanjut', label: 'Tindak Lanjut', icon: CheckSquare },
+    { id: 'peta', label: 'Peta Utama SPI', icon: Map, href: '/' },
+    { id: 'wilayah', label: 'Hasil Wilayah', icon: Building2, href: '/' },
+    { id: 'tabulasi', label: 'Tabulasi Instansi', icon: FileSpreadsheet, href: '/' },
+    { id: 'profil_umum', label: 'Profil Umum BPKP', icon: Building2, href: '/profil-umum' },
+    { id: 'historis', label: 'Data Historis', icon: History, href: '/' },
+    { id: 'tindak_lanjut', label: 'Tindak Lanjut', icon: CheckSquare, href: '/' },
   ];
 
   return (
@@ -59,7 +62,14 @@ export default function Sidebar() {
         <div className="w-72 lg:w-64 flex flex-col h-full overflow-y-auto">
           {/* Brand Header with BPKP Official Logo */}
           <div className="p-4 border-b border-bpkp-border flex items-center justify-between bg-gradient-to-r from-bpkp-blueSoft/50 to-white">
-            <BpkpLogo className="h-8 w-auto" showText={false} />
+            <Link
+              href="/"
+              onClick={() => setIsMobileSidebarOpen(false)}
+              className="flex items-center hover:opacity-90 transition-opacity"
+              title="Kembali ke Dashboard Utama"
+            >
+              <BpkpLogo className="h-8 w-auto" showText={false} />
+            </Link>
 
             <div className="flex items-center gap-1">
               {/* Desktop Collapse Toggle Button */}
@@ -99,7 +109,53 @@ export default function Sidebar() {
             </p>
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = activeTab === item.id;
+              const isProfilPage = pathname === '/profil-umum';
+              const isActive =
+                item.id === 'profil_umum'
+                  ? isProfilPage || (pathname === '/' && activeTab === 'profil_umum')
+                  : !isProfilPage && activeTab === item.id;
+
+              const activeStyles = isActive
+                ? 'bg-bpkp-blueSoft text-bpkp-blue border-l-4 border-bpkp-blue font-bold shadow-2xs'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900';
+
+              // Item "Profil Umum BPKP" always routes to /profil-umum with next/link
+              if (item.id === 'profil_umum') {
+                return (
+                  <Link
+                    key={item.id}
+                    href="/profil-umum"
+                    onClick={() => {
+                      setActiveTab('profil_umum');
+                      setIsMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold min-h-[44px] transition-all ${activeStyles}`}
+                  >
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-bpkp-blue' : 'text-slate-400'}`} />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              }
+
+              // Other items when on /profil-umum route back to / via next/link
+              if (isProfilPage) {
+                return (
+                  <Link
+                    key={item.id}
+                    href="/"
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setIsMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold min-h-[44px] transition-all ${activeStyles}`}
+                  >
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-bpkp-blue' : 'text-slate-400'}`} />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              }
+
+              // Other items when already on / stay on page and switch tab
               return (
                 <button
                   key={item.id}
@@ -107,11 +163,7 @@ export default function Sidebar() {
                     setActiveTab(item.id);
                     setIsMobileSidebarOpen(false);
                   }}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold min-h-[44px] transition-all ${
-                    isActive
-                      ? 'bg-bpkp-blueSoft text-bpkp-blue border-l-4 border-bpkp-blue font-bold shadow-2xs'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                  }`}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold min-h-[44px] transition-all ${activeStyles}`}
                 >
                   <Icon className={`w-4 h-4 ${isActive ? 'text-bpkp-blue' : 'text-slate-400'}`} />
                   <span>{item.label}</span>

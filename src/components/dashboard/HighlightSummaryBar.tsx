@@ -6,13 +6,13 @@ import { getTierByScore, formatScore } from '@/lib/scoringEngine';
 import { Award, AlertTriangle, TrendingUp, BarChart2 } from 'lucide-react';
 
 export default function HighlightSummaryBar() {
-  const { summary, setActiveCity } = useSpiDashboard();
+  const { summary, setActiveCity, thresholds } = useSpiDashboard();
 
   const avgTier = summary.tierRataRata;
   const highCity = summary.skorTertinggi;
-  const highTier = highCity ? getTierByScore(highCity.skor_total) : null;
+  const highTier = highCity ? getTierByScore(highCity.skor_total, thresholds) : null;
   const lowCity = summary.skorTerendah;
-  const lowTier = lowCity ? getTierByScore(lowCity.skor_total) : null;
+  const lowTier = lowCity ? getTierByScore(lowCity.skor_total, thresholds) : null;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3.5 select-none">

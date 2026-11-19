@@ -3,18 +3,33 @@
 // ====================================================================
 
 import { RiskTierKey, TierInfo } from '@/types/spi';
+import {
+  DEFAULT_RISK_THRESHOLDS,
+  getRiskTier,
+  RiskThreshold,
+  getContrastTextColor,
+} from './riskThresholds';
+
+export {
+  DEFAULT_RISK_THRESHOLDS,
+  getRiskTier,
+  getContrastTextColor,
+  computeLinkedThresholds,
+  validateThresholds,
+  fetchRiskThresholds,
+} from './riskThresholds';
+export type { RiskThreshold, ThresholdValidationResult } from './riskThresholds';
 
 /**
  * 5-Tier Klasifikasi Risiko Korupsi SPI Resmi KPK / BPKP
- * Batas Desimal Ketat Tanpa Tumpang Tindih (Zero Boundary Gap)
  */
 export const SPI_TIERS: Record<RiskTierKey, TierInfo> = {
   terjaga: {
     key: 'terjaga',
     label: 'Terjaga',
-    minScore: 80.00,
-    maxScore: 100.00,
-    hex: '#15803D', // Hijau Tua
+    minScore: 80.0,
+    maxScore: 100.0,
+    hex: '#15803D',
     bgClass: 'bg-emerald-100',
     textClass: 'text-emerald-800',
     borderClass: 'border-emerald-600',
@@ -24,9 +39,9 @@ export const SPI_TIERS: Record<RiskTierKey, TierInfo> = {
   terawasi: {
     key: 'terawasi',
     label: 'Terawasi',
-    minScore: 60.00,
+    minScore: 60.0,
     maxScore: 79.99,
-    hex: '#4ADE80', // Hijau Muda
+    hex: '#4ADE80',
     bgClass: 'bg-green-100',
     textClass: 'text-green-800',
     borderClass: 'border-green-400',
@@ -36,9 +51,9 @@ export const SPI_TIERS: Record<RiskTierKey, TierInfo> = {
   waspada: {
     key: 'waspada',
     label: 'Waspada',
-    minScore: 40.00,
+    minScore: 40.0,
     maxScore: 59.99,
-    hex: '#FACC15', // Kuning
+    hex: '#FACC15',
     bgClass: 'bg-yellow-100',
     textClass: 'text-yellow-900',
     borderClass: 'border-yellow-400',
@@ -48,9 +63,9 @@ export const SPI_TIERS: Record<RiskTierKey, TierInfo> = {
   rawan: {
     key: 'rawan',
     label: 'Rawan',
-    minScore: 20.00,
+    minScore: 20.0,
     maxScore: 39.99,
-    hex: '#FB923C', // Oren
+    hex: '#FB923C',
     bgClass: 'bg-orange-100',
     textClass: 'text-orange-900',
     borderClass: 'border-orange-400',
@@ -60,9 +75,9 @@ export const SPI_TIERS: Record<RiskTierKey, TierInfo> = {
   rentan: {
     key: 'rentan',
     label: 'Rentan',
-    minScore: 0.00,
+    minScore: 0.0,
     maxScore: 19.99,
-    hex: '#EF4444', // Merah
+    hex: '#EF4444',
     bgClass: 'bg-red-100',
     textClass: 'text-red-900',
     borderClass: 'border-red-500',
@@ -79,16 +94,29 @@ export function roundTo2Decimals(num: number): number {
 }
 
 /**
- * Evaluasi 5-Tier Berdasarkan Skor Numerik (Strict Boundaries)
+ * Evaluasi 5-Tier Berdasarkan Skor Numerik & Konfigurasi Threshold Dinamis
  */
-export function getTierByScore(score: number): TierInfo {
-  const rounded = roundTo2Decimals(score);
+export function getTierByScore(
+  score: number,
+  customThresholds: RiskThreshold[] = DEFAULT_RISK_THRESHOLDS
+): TierInfo {
+  const matched = getRiskTier(score, customThresholds);
+  const textContrast = getContrastTextColor(matched.color_hex);
 
-  if (rounded >= 80.00) return SPI_TIERS.terjaga;
-  if (rounded >= 60.00) return SPI_TIERS.terawasi;
-  if (rounded >= 40.00) return SPI_TIERS.waspada;
-  if (rounded >= 20.00) return SPI_TIERS.rawan;
-  return SPI_TIERS.rentan;
+  return {
+    key: matched.tier_key,
+    label: matched.label,
+    minScore: matched.min_score,
+    maxScore: matched.max_score,
+    hex: matched.color_hex,
+    bgClass: '',
+    textClass: textContrast === '#FFFFFF' ? 'text-white' : 'text-slate-900',
+    borderClass: '',
+    badgeClass: '',
+    description: `Kategori ${matched.label} (${matched.min_score.toFixed(0)} - ${
+      matched.max_score === 100 ? '100' : matched.max_score.toFixed(2)
+    })`,
+  };
 }
 
 /**

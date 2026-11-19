@@ -33,6 +33,7 @@ export default function SumselLeafletMap() {
     isHeatmapActive,
     selectedTierFilter,
     hoveredTierFilter,
+    thresholds,
     toggleHeatmap,
     setActiveCity,
     setHoveredCity,
@@ -73,7 +74,7 @@ export default function SumselLeafletMap() {
         };
       }
 
-      const tier = getTierByScore(Number(city.skor_total));
+      const tier = getTierByScore(Number(city.skor_total), thresholds);
       const isSelected = activeCity?.kode_wilayah === kode;
       const isHovered = hoveredCity?.kode_wilayah === kode;
 
@@ -135,7 +136,7 @@ export default function SumselLeafletMap() {
         lineCap: 'round',
       };
     },
-    [surveyMap, activeCity, hoveredCity, isHeatmapActive, selectedTierFilter, hoveredTierFilter]
+    [surveyMap, activeCity, hoveredCity, isHeatmapActive, selectedTierFilter, hoveredTierFilter, thresholds]
   );
 
   // Initialize Map Instance

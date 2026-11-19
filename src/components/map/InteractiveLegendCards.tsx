@@ -2,19 +2,20 @@
 
 import React from 'react';
 import { useSpiDashboard } from '@/context/SpiDashboardContext';
-import { SPI_TIERS } from '@/lib/scoringEngine';
+import { getRiskTier } from '@/lib/riskThresholds';
 import { RiskTierKey } from '@/types/spi';
 
 export default function InteractiveLegendCards() {
   const {
     surveys,
+    thresholds,
     selectedTierFilter,
     setSelectedTierFilter,
     hoveredTierFilter,
     setHoveredTierFilter,
   } = useSpiDashboard();
 
-  // Count cities in each tier
+  // Count cities in each tier dynamically using thresholds
   const tierCounts = React.useMemo(() => {
     const counts: Record<RiskTierKey, number> = {
       terjaga: 0,
@@ -25,16 +26,13 @@ export default function InteractiveLegendCards() {
     };
     surveys.forEach((s) => {
       const score = Number(s.skor_total);
-      if (score >= 80.00) counts.terjaga++;
-      else if (score >= 60.00) counts.terawasi++;
-      else if (score >= 40.00) counts.waspada++;
-      else if (score >= 20.00) counts.rawan++;
-      else counts.rentan++;
+      const tier = getRiskTier(score, thresholds);
+      if (counts[tier.tier_key] !== undefined) {
+        counts[tier.tier_key]++;
+      }
     });
     return counts;
-  }, [surveys]);
-
-  const tiersList = Object.values(SPI_TIERS);
+  }, [surveys, thresholds]);
 
   const handleCardClick = (key: RiskTierKey) => {
     if (selectedTierFilter === key) {
@@ -46,16 +44,16 @@ export default function InteractiveLegendCards() {
 
   return (
     <div className="absolute bottom-3 right-3 sm:bottom-3.5 sm:right-4 z-[400] hidden sm:flex flex-nowrap items-center gap-1.5 sm:gap-2 pointer-events-auto select-none">
-      {tiersList.map((tier) => {
-        const isSelected = selectedTierFilter === tier.key;
-        const isHovered = hoveredTierFilter === tier.key;
-        const count = tierCounts[tier.key];
+      {thresholds.map((tier) => {
+        const isSelected = selectedTierFilter === tier.tier_key;
+        const isHovered = hoveredTierFilter === tier.tier_key;
+        const count = tierCounts[tier.tier_key] || 0;
 
         return (
           <button
-            key={tier.key}
-            onClick={() => handleCardClick(tier.key)}
-            onMouseEnter={() => setHoveredTierFilter(tier.key)}
+            key={tier.tier_key}
+            onClick={() => handleCardClick(tier.tier_key)}
+            onMouseEnter={() => setHoveredTierFilter(tier.tier_key)}
             onMouseLeave={() => setHoveredTierFilter(null)}
             className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border text-left transition-all backdrop-blur-md shadow-xs ${
               isSelected || isHovered
@@ -66,7 +64,7 @@ export default function InteractiveLegendCards() {
           >
             <span
               className="w-3.5 h-3.5 rounded-full flex-shrink-0 border border-black/10"
-              style={{ backgroundColor: tier.hex }}
+              style={{ backgroundColor: tier.color_hex }}
             />
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-1.5">
@@ -76,15 +74,15 @@ export default function InteractiveLegendCards() {
                 <span
                   className="px-1.5 py-0.2 rounded-full text-[9px] font-black"
                   style={{
-                    backgroundColor: `${tier.hex}25`,
-                    color: tier.hex,
+                    backgroundColor: `${tier.color_hex}25`,
+                    color: tier.color_hex,
                   }}
                 >
                   {count}
                 </span>
               </div>
               <span className="text-[9px] text-slate-400 font-medium leading-tight mt-0.5">
-                {tier.minScore.toFixed(0)} - {tier.maxScore === 100 ? '100' : tier.maxScore.toFixed(2)}
+                {tier.min_score.toFixed(0)} - {tier.max_score === 100 ? '100' : tier.max_score.toFixed(2)}
               </span>
             </div>
           </button>

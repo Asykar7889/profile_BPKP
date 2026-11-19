@@ -1,5 +1,5 @@
 -- ====================================================================
--- DASHBOARD PEMETAAN TINGKAT RISIKO KORUPSI (SPI) SUMATERA SELATAN & AI SCORING
+-- DASHBOARD PEMETAAN TINGKAT RISIKO KORUPSI (SPI) SUMATERA SELATAN
 -- BPKP PERWAKILAN PROVINSI SUMATERA SELATAN (17 KABUPATEN / KOTA)
 -- PostgreSQL DDL, Row Level Security (RLS), Audit Trail & Seed Data
 -- ====================================================================
@@ -44,21 +44,29 @@ CREATE TABLE IF NOT EXISTS public.city_surveys (
   CONSTRAINT uq_city_surveys_code_year UNIQUE (city_code, year)
 );
 
--- 4. TABLE: input_history_logs (AI Report Audit Trail & Rollback Engine)
+-- 4. TABLE: input_history_logs (Survey Audit Trail & Rollback Engine)
 CREATE TABLE IF NOT EXISTS public.input_history_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  city_id UUID REFERENCES public.city_surveys(id) ON DELETE CASCADE,
+  survey_id UUID REFERENCES public.city_surveys(id) ON DELETE CASCADE,
   city_code VARCHAR(10) NOT NULL,
+  kode_wilayah VARCHAR(10) GENERATED ALWAYS AS (city_code) STORED,
   city_name VARCHAR(100) NOT NULL,
+  nama_wilayah VARCHAR(100) GENERATED ALWAYS AS (city_name) STORED,
   year INTEGER NOT NULL DEFAULT 2026,
+  tahun INTEGER GENERATED ALWAYS AS (year) STORED,
   submitted_by UUID REFERENCES public.user_profiles(id) ON DELETE SET NULL,
   submitted_by_name VARCHAR(100) NOT NULL DEFAULT 'Pegawai SPI',
-  report_text TEXT NOT NULL,
-  old_score NUMERIC(5,2) NOT NULL,
-  delta_score NUMERIC(5,2) NOT NULL,
-  new_score NUMERIC(5,2) NOT NULL,
-  category_impact VARCHAR(50) NOT NULL DEFAULT 'internal',
-  ai_reasoning TEXT NOT NULL,
+  pegawai_id TEXT,
+  nama_pegawai VARCHAR(100),
+  old_score NUMERIC(5,2) NOT NULL DEFAULT 0.00,
+  skor_lama NUMERIC(5,2) GENERATED ALWAYS AS (old_score) STORED,
+  new_score NUMERIC(5,2) NOT NULL DEFAULT 0.00,
+  skor_baru NUMERIC(5,2) GENERATED ALWAYS AS (new_score) STORED,
+  kategori_lama VARCHAR(30) DEFAULT 'Waspada',
+  kategori_baru VARCHAR(30) DEFAULT 'Waspada',
+  notes TEXT DEFAULT 'Pembaruan data indikator SPI manual oleh pegawai.',
+  old_payload JSONB,
+  new_payload JSONB,
   status VARCHAR(20) NOT NULL DEFAULT 'applied' CHECK (status IN ('applied', 'edited', 'reverted')),
   action_type VARCHAR(20) NOT NULL DEFAULT 'UPDATE' CHECK (action_type IN ('CREATE', 'UPDATE', 'EDIT_ADMIN', 'REVERT')),
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -150,10 +158,61 @@ ON CONFLICT (city_code, year) DO UPDATE SET
 
 -- 9. SEED INITIAL AUDIT LOGS
 INSERT INTO public.input_history_logs (
-  city_code, city_name, year, submitted_by_name, report_text,
-  old_score, delta_score, new_score, category_impact, ai_reasoning, status, action_type
+  city_code, city_name, year, submitted_by_name, nama_pegawai,
+  old_score, new_score, kategori_lama, kategori_baru, notes, status, action_type
 ) VALUES
-  ('1607', 'Kabupaten Banyuasin', 2026, 'Ahmad Fauzi, S.E. (Verifikator)', 'Implementasi sistem antrean perizinan online dan sertifikasi ISO 37001 Anti Suap pada DPMPTSP Banyuasin berhasil mengurangi calo.', 61.25, 2.50, 63.75, 'eksternal', 'Penerapan standar anti-penyuapan dan digitalisasi izin memangkas celah pungli.', 'applied', 'UPDATE'),
-  ('1671', 'Kota Palembang', 2026, 'Ahmad Fauzi, S.E. (Verifikator)', 'Peningkatan pengawasan sistem pembayaran pajak reklame non-tunai dan digitalisasi retribusi pasar.', 76.85, 2.00, 78.85, 'internal', 'Digitalisasi penerimaan daerah menekan potensi kebocoran pendapatan asli daerah.', 'applied', 'UPDATE'),
-  ('1613', 'Kabupaten Musi Rawas Utara', 2026, 'Ahmad Fauzi, S.E. (Verifikator)', 'Temuan berulang kekurangan volume pekerjaan jalan dinas PUPR dan keterlambatan penyelesaian ganti rugi pembebasan lahan.', 23.40, -5.00, 18.40, 'internal', 'Kekurangan volume fisik proyek dan sengketa lahan berulang mengindikasikan kelemahan pengendalian internal serius.', 'applied', 'UPDATE')
+  ('1607', 'Kabupaten Banyuasin', 2026, 'Ahmad Fauzi, S.E. (Verifikator)', 'Ahmad Fauzi, S.E.', 61.25, 63.75, 'Terawasi', 'Terawasi', 'Pembaruan data indikator SPI manual oleh pegawai.', 'applied', 'UPDATE'),
+  ('1671', 'Kota Palembang', 2026, 'Ahmad Fauzi, S.E. (Verifikator)', 'Ahmad Fauzi, S.E.', 76.85, 78.85, 'Terawasi', 'Terawasi', 'Pembaruan data indikator SPI manual oleh pegawai.', 'applied', 'UPDATE'),
+  ('1613', 'Kabupaten Musi Rawas Utara', 2026, 'Ahmad Fauzi, S.E. (Verifikator)', 'Ahmad Fauzi, S.E.', 23.40, 18.40, 'Rawan', 'Rentan', 'Pembaruan data indikator SPI manual oleh pegawai.', 'applied', 'UPDATE')
 ON CONFLICT DO NOTHING;
+
+-- ====================================================================
+-- 10. TABLE & SEED: risk_thresholds (Pengaturan Tingkat Risiko Dinamis)
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS public.risk_thresholds (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tier_key TEXT UNIQUE NOT NULL CHECK (tier_key IN ('terjaga', 'terawasi', 'waspada', 'rawan', 'rentan')),
+  label TEXT NOT NULL,
+  min_score NUMERIC(5,2) NOT NULL,
+  max_score NUMERIC(5,2) NOT NULL,
+  color_hex TEXT NOT NULL,
+  sort_order INTEGER NOT NULL UNIQUE CHECK (sort_order BETWEEN 1 AND 5),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_by UUID REFERENCES public.user_profiles(id) ON DELETE SET NULL,
+  CONSTRAINT chk_score_range CHECK (min_score >= 0.00 AND max_score <= 100.00 AND min_score <= max_score)
+);
+
+CREATE INDEX IF NOT EXISTS idx_risk_thresholds_sort_order ON public.risk_thresholds(sort_order ASC);
+ALTER TABLE public.risk_thresholds ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public and authenticated read risk_thresholds" ON public.risk_thresholds;
+CREATE POLICY "Public and authenticated read risk_thresholds" ON public.risk_thresholds FOR SELECT TO public USING (true);
+
+DROP POLICY IF EXISTS "Admin update risk_thresholds" ON public.risk_thresholds;
+CREATE POLICY "Admin update risk_thresholds" ON public.risk_thresholds
+  FOR UPDATE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.user_profiles
+      WHERE user_profiles.auth_user_id = auth.uid() AND user_profiles.role = 'admin'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.user_profiles
+      WHERE user_profiles.auth_user_id = auth.uid() AND user_profiles.role = 'admin'
+    )
+  );
+
+DROP POLICY IF EXISTS "Service role manage risk_thresholds" ON public.risk_thresholds;
+CREATE POLICY "Service role manage risk_thresholds" ON public.risk_thresholds FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+INSERT INTO public.risk_thresholds (tier_key, label, min_score, max_score, color_hex, sort_order)
+VALUES
+  ('terjaga', 'Terjaga', 80.00, 100.00, '#15803D', 1),
+  ('terawasi', 'Terawasi', 60.00, 79.99, '#4ADE80', 2),
+  ('waspada', 'Waspada', 40.00, 59.99, '#FACC15', 3),
+  ('rawan', 'Rawan', 20.00, 39.99, '#FB923C', 4),
+  ('rentan', 'Rentan', 0.00, 19.99, '#EF4444', 5)
+ON CONFLICT (tier_key) DO NOTHING;
+

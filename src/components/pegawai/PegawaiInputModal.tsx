@@ -23,6 +23,7 @@ import {
 export default function PegawaiInputModal() {
   const {
     surveys,
+    thresholds,
     isPegawaiInputOpen,
     setIsPegawaiInputOpen,
     editingCityForInput,
@@ -81,8 +82,9 @@ export default function PegawaiInputModal() {
     }
   };
 
-  const handleIndicatorChange = (name: string, val: number) => {
-    const clamped = Math.max(0, Math.min(100, isNaN(val) ? 0 : val));
+  const handleIndicatorChange = (name: string, val: number, isKoreksi: boolean = false) => {
+    const maxLimit = isKoreksi ? 30 : 100;
+    const clamped = Math.max(0, Math.min(maxLimit, isNaN(val) ? 0 : roundTo2Decimals(val)));
     setIndicatorValues((prev) => ({
       ...prev,
       [name]: clamped,
@@ -100,7 +102,7 @@ export default function PegawaiInputModal() {
       return {
         updatedDimensions: [],
         liveScore: 0,
-        liveTier: getTierByScore(0),
+        liveTier: getTierByScore(0, thresholds),
       };
     }
 
@@ -125,14 +127,14 @@ export default function PegawaiInputModal() {
     });
 
     const score = calculateTotalSpiScore(newDims);
-    const tier = getTierByScore(score);
+    const tier = getTierByScore(score, thresholds);
 
     return {
       updatedDimensions: newDims,
       liveScore: score,
       liveTier: tier,
     };
-  }, [currentCity, indicatorValues]);
+  }, [currentCity, indicatorValues, thresholds]);
 
   if (!isPegawaiInputOpen) return null;
 
@@ -334,19 +336,19 @@ export default function PegawaiInputModal() {
                               <span className="text-slate-700 font-medium line-clamp-1 pr-2">
                                 {ind.nama_indikator}
                               </span>
-                              <span className="font-bold text-slate-900 w-12 text-right">
-                                {val.toFixed(1)}
+                              <span className="font-bold text-slate-900 w-14 text-right font-mono">
+                                {val.toFixed(2)}
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
                               <input
                                 type="range"
                                 min={0}
-                                max={isKoreksi ? 20 : 100}
-                                step={0.5}
+                                max={isKoreksi ? 30 : 100}
+                                step={0.1}
                                 value={val}
                                 onChange={(e) =>
-                                  handleIndicatorChange(ind.nama_indikator, parseFloat(e.target.value))
+                                  handleIndicatorChange(ind.nama_indikator, parseFloat(e.target.value), isKoreksi)
                                 }
                                 className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer ${
                                   isKoreksi ? 'accent-rose-600 bg-rose-200' : 'accent-blue-600 bg-slate-200'
@@ -355,13 +357,13 @@ export default function PegawaiInputModal() {
                               <input
                                 type="number"
                                 min={0}
-                                max={isKoreksi ? 20 : 100}
-                                step={0.1}
+                                max={isKoreksi ? 30 : 100}
+                                step={0.01}
                                 value={val}
                                 onChange={(e) =>
-                                  handleIndicatorChange(ind.nama_indikator, parseFloat(e.target.value))
+                                  handleIndicatorChange(ind.nama_indikator, parseFloat(e.target.value), isKoreksi)
                                 }
-                                className="w-14 text-center text-xs font-bold py-1 px-1 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="w-16 text-center text-xs font-bold font-mono py-1 px-1 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-800"
                               />
                             </div>
                           </div>

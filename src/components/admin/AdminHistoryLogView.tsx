@@ -28,6 +28,7 @@ export default function AdminHistoryLogView() {
     openPegawaiInputForCity,
     rollbackSurvey,
     surveys,
+    thresholds,
   } = useSpiDashboard();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -182,8 +183,8 @@ export default function AdminHistoryLogView() {
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                   {filteredLogs.map((log) => {
                     const delta = roundTo2Decimals(log.skor_baru - log.skor_lama);
-                    const oldTier = getTierByScore(log.skor_lama);
-                    const newTier = getTierByScore(log.skor_baru);
+                    const oldTier = getTierByScore(log.skor_lama, thresholds);
+                    const newTier = getTierByScore(log.skor_baru, thresholds);
 
                     const actionBadge = {
                       CREATE: 'bg-emerald-50 text-emerald-700 border-emerald-200',

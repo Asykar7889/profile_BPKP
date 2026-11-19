@@ -23,6 +23,7 @@ export default function RightScorePanel() {
     hoveredCity,
     summary,
     surveys,
+    thresholds,
     userRole,
     resetToProvince,
     openPegawaiInputForCity,
@@ -93,7 +94,7 @@ export default function RightScorePanel() {
   const currentDimData = currentDimensions.find((d) => d.kode_dimensi === activeDimension) || currentDimensions[0];
 
   const currentScore = displayCity ? Number(displayCity.skor_total) : summary.rataRataSkor;
-  const currentTier = getTierByScore(currentScore);
+  const currentTier = getTierByScore(currentScore, thresholds);
 
   return (
     <div className="w-full h-full flex flex-col bg-white overflow-hidden select-none">
@@ -132,7 +133,7 @@ export default function RightScorePanel() {
       <div className="flex-1 overflow-y-auto min-h-0 p-3.5 sm:p-4 space-y-4">
         {/* Semi-Circle Gauge Chart */}
         <div className="p-3 rounded-2xl bg-slate-50/70 border border-slate-100 flex flex-col items-center">
-          <SemiCircleGauge score={currentScore} />
+          <SemiCircleGauge score={currentScore} thresholds={thresholds} />
         </div>
 
         {/* Action Button for Pegawai / Admin */}
@@ -210,7 +211,7 @@ export default function RightScorePanel() {
             <div className="space-y-2.5">
               {currentDimData.indicators.map((ind, idx) => {
                 const score = Number(ind.skor_indikator);
-                const indTier = getTierByScore(score);
+                const indTier = getTierByScore(score, thresholds);
                 const pct = Math.min(100, Math.max(0, score));
 
                 return (

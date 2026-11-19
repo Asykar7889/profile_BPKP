@@ -78,37 +78,17 @@ export interface InputHistoryLog {
   submitted_by?: string;
   submitted_by_name?: string;
   action_type: ActionType;
-  report_text?: string;
   skor_lama: number;
   old_score?: number;
-  delta_score?: number;
   kategori_lama: string;
   skor_baru: number;
   new_score?: number;
   kategori_baru: string;
-  category_impact?: 'internal' | 'eksternal' | 'eksper' | string;
-  ai_reasoning?: string;
-  recommendation?: string;
+  notes?: string;
   status?: LogStatus;
   old_payload?: CitySurvey;
   new_payload?: CitySurvey;
   created_at: string;
-}
-
-export interface AiReportAnalysisResult {
-  success: boolean;
-  city_code: string;
-  city_name: string;
-  year: number;
-  old_score: number;
-  delta_score: number;
-  new_score: number;
-  risk_category: string;
-  category_impact: 'internal' | 'eksternal' | 'eksper';
-  ai_reasoning: string;
-  recommendation: string;
-  log_id?: string;
-  error?: string;
 }
 
 export interface ProvincialSummary {

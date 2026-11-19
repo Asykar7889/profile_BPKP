@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useDashboard } from '@/context/DashboardContext';
 import { useSpiDashboard } from '@/context/SpiDashboardContext';
 import { RISK_TIERS, formatScore, formatNumber, getTierByScore } from '@/lib/scoringUtils';
+import { getContrastTextColor } from '@/lib/riskThresholds';
 import { RiskTierKey, RegionData } from '@/types/dashboard';
 import {
   Layers,
@@ -141,6 +142,8 @@ export default function InMapRiskSidebar() {
   // Target city for live display: hovered takes immediate priority, then active
   const currentCity = hoveredCity || activeCity;
 
+  const thresholds = spiCtx?.thresholds;
+
   // Group cities by risk tier
   const citiesByTier = React.useMemo(() => {
     const grouped: Record<RiskTierKey, RegionData[]> = {
@@ -152,16 +155,15 @@ export default function InMapRiskSidebar() {
     };
     regions.forEach((r) => {
       const score = Number(r.skor_total);
-      if (score >= 80) grouped.terjaga.push(r);
-      else if (score >= 60) grouped.terawasi.push(r);
-      else if (score >= 40) grouped.waspada.push(r);
-      else if (score >= 20) grouped.rawan.push(r);
-      else grouped.rentan.push(r);
+      const tier = getTierByScore(score, thresholds);
+      if (grouped[tier.key]) {
+        grouped[tier.key].push(r);
+      }
     });
     return grouped;
-  }, [regions]);
+  }, [regions, thresholds]);
 
-  const currentTier = currentCity ? getTierByScore(Number(currentCity.skor_total)) : null;
+  const currentTier = currentCity ? getTierByScore(Number(currentCity.skor_total), thresholds) : null;
 
   return (
     <>
@@ -336,8 +338,25 @@ export default function InMapRiskSidebar() {
                   )}
                 </div>
 
-                {tiers.map((key) => {
-                  const tier = RISK_TIERS[key];
+                {(thresholds && thresholds.length === 5
+                  ? thresholds.map((t) => ({
+                      key: t.tier_key,
+                      label: t.label,
+                      description: RISK_TIERS[t.tier_key]?.description || '',
+                      hex: t.color_hex,
+                      minScore: t.min_score,
+                      maxScore: t.max_score,
+                    }))
+                  : tiers.map((key) => ({
+                      key,
+                      label: RISK_TIERS[key].label,
+                      description: RISK_TIERS[key].description,
+                      hex: RISK_TIERS[key].hex,
+                      minScore: RISK_TIERS[key].minScore,
+                      maxScore: RISK_TIERS[key].maxScore,
+                    }))
+                ).map((tier) => {
+                  const key = tier.key;
                   const matchingCities = citiesByTier[key] || [];
                   const isSelected = selectedTierFilter === key;
 
@@ -368,7 +387,7 @@ export default function InMapRiskSidebar() {
                                 {tier.label}
                               </span>
                               <span className={`text-[9.5px] font-mono ${isSelected ? 'text-blue-200' : 'text-slate-400'}`}>
-                                ({tier.minScore.toFixed(0)} - {tier.maxScore.toFixed(2)})
+                                ({tier.minScore.toFixed(0)} - {tier.maxScore === 100 ? '100' : tier.maxScore.toFixed(2)})
                               </span>
                             </div>
                             <p className={`text-[9px] truncate ${isSelected ? 'text-slate-300' : 'text-slate-500'}`}>
@@ -432,8 +451,11 @@ export default function InMapRiskSidebar() {
                       <span>{currentCity.tipe_wilayah} • KODE: {currentCity.kode_wilayah}</span>
                       {currentTier && (
                         <span
-                          className="px-2 py-0.5 rounded font-bold text-white text-[9.5px] shadow-2xs"
-                          style={{ backgroundColor: currentTier.hex }}
+                          className="px-2 py-0.5 rounded font-bold text-[9.5px] shadow-2xs"
+                          style={{
+                            backgroundColor: currentTier.hex,
+                            color: getContrastTextColor(currentTier.hex),
+                          }}
                         >
                           {currentTier.label}
                         </span>

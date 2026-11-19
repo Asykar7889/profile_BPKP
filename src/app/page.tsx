@@ -15,6 +15,7 @@ import ProfilUmumBpkp from '@/components/panels/ProfilUmumBpkp';
 import AuthModal from '@/components/auth/AuthModal';
 import PegawaiInputModal from '@/components/pegawai/PegawaiInputModal';
 import AdminHistoryLogView from '@/components/admin/AdminHistoryLogView';
+import AdminRiskSettingsModal from '@/components/admin/AdminRiskSettingsModal';
 import { BarChart3, AlertOctagon } from 'lucide-react';
 
 function DashboardBody() {
@@ -147,10 +148,11 @@ function DashboardBody() {
         </div>
       </div>
 
-      {/* 3. Global Modals (Module 5 & 6) */}
+      {/* 3. Global Modals (Module 5 & 6 & Dynamic Risk Settings) */}
       <AuthModal />
       <PegawaiInputModal />
       <AdminHistoryLogView />
+      <AdminRiskSettingsModal />
     </div>
   );
 }

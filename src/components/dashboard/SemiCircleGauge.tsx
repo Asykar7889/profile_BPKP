@@ -2,19 +2,22 @@
 
 import React from 'react';
 import { getTierByScore, formatScore } from '@/lib/scoringEngine';
+import { RiskThreshold, getContrastTextColor } from '@/lib/riskThresholds';
 
 interface SemiCircleGaugeProps {
   score: number;
   label?: string;
   size?: number;
+  thresholds?: RiskThreshold[];
 }
 
 export default function SemiCircleGauge({
   score,
   label,
   size = 240,
+  thresholds,
 }: SemiCircleGaugeProps) {
-  const tier = getTierByScore(score);
+  const tier = getTierByScore(score, thresholds);
   const clamped = Math.max(0, Math.min(100, score));
 
   // Geometry calculations for a 180-degree gauge (center at x=120, y=120, radius=90)
@@ -113,7 +116,7 @@ export default function SemiCircleGauge({
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1">
           <span
             className="px-3 py-1 rounded-full text-xs font-black shadow-xs tracking-wide"
-            style={{ backgroundColor: tier.hex, color: tier.key === 'waspada' || tier.key === 'terawasi' ? '#0F172A' : '#FFFFFF' }}
+            style={{ backgroundColor: tier.hex, color: getContrastTextColor(tier.hex) }}
           >
             {tier.label}
           </span>

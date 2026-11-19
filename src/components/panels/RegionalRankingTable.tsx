@@ -177,7 +177,7 @@ export default function RegionalRankingTable() {
           </thead>
           <tbody className="divide-y divide-slate-100 font-medium">
             {sortedRegions.map((region, idx) => {
-              const tier = getTierByScore(Number(region.skor_total));
+              const tier = getTierByScore(Number(region.skor_total), spiCtx?.thresholds);
               const isSelected = activeCity?.kode_wilayah === region.kode_wilayah;
 
               return (
