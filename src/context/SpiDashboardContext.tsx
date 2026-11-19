@@ -59,7 +59,7 @@ interface SpiDashboardContextType {
   resetToProvince: () => void;
 }
 
-const SpiDashboardContext = createContext<SpiDashboardContextType | null>(null);
+export const SpiDashboardContext = createContext<SpiDashboardContextType | null>(null);
 
 export function SpiDashboardProvider({ children }: { children: React.ReactNode }) {
   const [surveys, setSurveys] = useState<CitySurvey[]>(INITIAL_CITY_SURVEYS_2026);
@@ -466,4 +466,8 @@ export function useSpiDashboard() {
     throw new Error('useSpiDashboard must be used within a SpiDashboardProvider');
   }
   return ctx;
+}
+
+export function useOptionalSpiDashboard() {
+  return useContext(SpiDashboardContext);
 }

@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { useDashboard } from '@/context/DashboardContext';
 import { useSpiDashboard } from '@/context/SpiDashboardContext';
 import { SUMSEL_GEOJSON } from '@/data/sumselGeoJson';
 import {
@@ -38,6 +39,14 @@ export default function SumselLeafletMap() {
     setActiveCity,
     setHoveredCity,
   } = useSpiDashboard();
+
+  const {
+    setActiveCity: setDashActiveCity,
+    setHoveredCity: setDashHoveredCity,
+    isMainSidebarOpen,
+    isDesktopSidebarOpen,
+  } = useDashboard();
+  const isSidebarOpen = isDesktopSidebarOpen ?? isMainSidebarOpen;
 
   const activeCityRef = useRef(activeCity);
   useEffect(() => {
@@ -150,6 +159,7 @@ export default function SumselLeafletMap() {
       maxZoom: 13,
       zoomControl: false,
       attributionControl: false,
+      scrollWheelZoom: false, // Fix 2: Disable wheel zoom so mouse wheel smoothly scrolls page content
     });
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -184,9 +194,31 @@ export default function SumselLeafletMap() {
     map.on('zoomend', updateZoomClasses);
     updateZoomClasses();
 
-    // Click on empty canvas does not lose selection unless intended
+    // Fix 1: Click on white canvas background outside polygons -> Reset all popups, active city, and camera zoom
     map.on('click', () => {
+      // 1. Close all open popups and tooltips
+      map.closePopup();
+      map.eachLayer((layer: any) => {
+        if (typeof layer.closeTooltip === 'function') {
+          layer.closeTooltip();
+        }
+      });
+
+      // 2. Reset active city and right detail panel to provincial summary
+      setActiveCity(null);
       setHoveredCity(null);
+      if (setDashActiveCity) setDashActiveCity(null);
+      if (setDashHoveredCity) setDashHoveredCity(null);
+
+      // 3. Smoothly reset camera to initial South Sumatra overview
+      if (geoJsonLayerRef.current && geoJsonLayerRef.current.getBounds().isValid()) {
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+        map.flyToBounds(geoJsonLayerRef.current.getBounds(), {
+          padding: isMobile ? [20, 20] : [35, 35],
+          maxZoom: 9,
+          duration: 0.35,
+        });
+      }
     });
 
     mapRef.current = map;
@@ -197,7 +229,7 @@ export default function SumselLeafletMap() {
       hasInitializedRef.current = false;
       prevActiveKodeRef.current = null;
     };
-  }, [setHoveredCity]);
+  }, [setHoveredCity, setActiveCity, setDashActiveCity, setDashHoveredCity]);
 
   // Mount GeoJSON Layer ONCE
   useEffect(() => {
@@ -270,6 +302,9 @@ export default function SumselLeafletMap() {
           },
           click: (e) => {
             L.DomEvent.stopPropagation(e);
+            if (e.originalEvent) {
+              L.DomEvent.stopPropagation(e.originalEvent);
+            }
             const current = surveyMapRef.current.get(kode);
             if (current) {
               setActiveCity(current);
@@ -406,16 +441,29 @@ export default function SumselLeafletMap() {
     }
   }, [activeCity]);
 
+  // Step 3: Synchronize Leaflet map canvas size on desktop sidebar toggle after width transition completes (~250ms)
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    const timer = setTimeout(() => {
+      if (mapRef.current) {
+        mapRef.current.invalidateSize({ animate: true });
+      }
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [isSidebarOpen]);
+
   return (
-    <div className="relative w-full h-full rounded-2xl overflow-hidden border border-slate-200/90 shadow-sm bg-white isolate z-10">
+    <div className="relative w-full h-full rounded-2xl overflow-hidden border border-slate-200/90 shadow-sm bg-white isolate z-0">
       {/* 1. In-Map Risk Sidebar / Pop-up Panel Tingkat Risiko SPI */}
       <InMapRiskSidebar />
 
-      {/* 2. Top-Right Heatmap Toggle Button */}
-      <div className="absolute top-3.5 right-4 z-[400] flex items-center gap-2">
+      {/* 2. Top-Right Heatmap Toggle Button (Compact on Mobile to prevent collision) */}
+      <div className="absolute top-2.5 right-2.5 sm:top-3 sm:right-4 z-[400] flex items-center gap-2">
         <button
           onClick={toggleHeatmap}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-sm backdrop-blur-md ${
+          className={`flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl border text-[11px] sm:text-xs font-bold transition-all shadow-sm backdrop-blur-md active:scale-95 ${
             isHeatmapActive
               ? 'bg-slate-900 text-white border-slate-900'
               : 'bg-white/95 text-slate-700 border-slate-200 hover:bg-white'
@@ -423,7 +471,8 @@ export default function SumselLeafletMap() {
           title="Tampilkan warna skor 5-tier pada seluruh kota sekaligus"
         >
           <Layers className="w-3.5 h-3.5" />
-          <span>{isHeatmapActive ? 'Heatmap: Aktif' : 'Tampilkan Warna Semua Kota'}</span>
+          <span className="hidden sm:inline">{isHeatmapActive ? 'Heatmap: Aktif' : 'Tampilkan Warna Semua Kota'}</span>
+          <span className="sm:hidden">{isHeatmapActive ? 'Heatmap Aktif' : 'Semua Warna'}</span>
         </button>
       </div>
 

@@ -164,3 +164,12 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #0000FE;
 }
+
+/* Hide scrollbar utility for mobile horizontal legend strip */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

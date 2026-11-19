@@ -120,11 +120,11 @@ export default function RightScorePanel() {
         {activeCity && (
           <button
             onClick={resetToProvince}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition shrink-0"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition shrink-0 active:scale-95 shadow-2xs border border-slate-200"
             title="Kembali ke Ringkasan Provinsi"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Reset</span>
+            <RotateCcw className="w-3.5 h-3.5 text-blue-600" />
+            <span>Reset</span>
           </button>
         )}
       </div>

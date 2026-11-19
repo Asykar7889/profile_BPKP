@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useDashboard } from '@/context/DashboardContext';
-import { useSpiDashboard } from '@/context/SpiDashboardContext';
+import { useOptionalSpiDashboard } from '@/context/SpiDashboardContext';
 import { RegionData } from '@/types/dashboard';
 import {
   ArrowUpDown,
@@ -12,15 +12,12 @@ import {
   CheckCircle2,
   ChevronRight
 } from 'lucide-react';
-import { getTierByScore, formatScore, formatNumber } from '@/lib/scoringUtils';
+import { formatScore, formatNumber } from '@/lib/scoringUtils';
+import { getRiskTier, getContrastTextColor, DEFAULT_RISK_THRESHOLDS } from '@/lib/riskThresholds';
 
 export default function RegionalRankingTable() {
   const { regions, setActiveCity, activeCity, downloadCsv } = useDashboard();
-  let spiCtx: ReturnType<typeof useSpiDashboard> | null = null;
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    spiCtx = useSpiDashboard();
-  } catch {}
+  const spiCtx = useOptionalSpiDashboard();
 
   const [sortField, setSortField] = useState<string>('skor_total');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -177,7 +174,8 @@ export default function RegionalRankingTable() {
           </thead>
           <tbody className="divide-y divide-slate-100 font-medium">
             {sortedRegions.map((region, idx) => {
-              const tier = getTierByScore(Number(region.skor_total), spiCtx?.thresholds);
+              const tier = getRiskTier(Number(region.skor_total), spiCtx?.thresholds || DEFAULT_RISK_THRESHOLDS);
+              const textColor = getContrastTextColor(tier.color_hex);
               const isSelected = activeCity?.kode_wilayah === region.kode_wilayah;
 
               return (
@@ -190,25 +188,28 @@ export default function RegionalRankingTable() {
                       : 'hover:bg-slate-50/80 text-slate-700'
                   }`}
                 >
-                  <td className="py-2 px-3 text-center font-mono text-slate-400 font-bold">
+                  <td className="py-2.5 px-3 text-center font-mono text-slate-400 font-bold">
                     {idx + 1}
                   </td>
-                  <td className="py-2 px-3 font-semibold text-slate-900">
+                  <td className="py-2.5 px-3 font-semibold text-slate-900">
                     <div className="flex items-center gap-2">
                       <span
-                        className="w-2 h-2 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: tier.hex }}
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-xs"
+                        style={{ backgroundColor: tier.color_hex }}
                       />
                       <span>{region.nama_wilayah}</span>
                     </div>
                   </td>
-                  <td className="py-2 px-3 font-mono font-black text-sm" style={{ color: tier.hex }}>
+                  <td className="py-2.5 px-3 font-mono font-black text-sm text-slate-800">
                     {formatScore(Number(region.skor_total))}
                   </td>
-                  <td className="py-2 px-3">
+                  <td className="py-2.5 px-3">
                     <span
-                      className="inline-block px-2 py-0.5 rounded text-[10px] font-bold"
-                      style={{ backgroundColor: `${tier.hex}1F`, color: tier.hex }}
+                      className="inline-flex items-center justify-center px-2.5 py-1 rounded-md text-[11px] font-bold tracking-tight shadow-xs select-none"
+                      style={{
+                        backgroundColor: tier.color_hex,
+                        color: textColor,
+                      }}
                     >
                       {tier.label}
                     </span>

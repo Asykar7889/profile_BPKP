@@ -43,7 +43,7 @@ export default function InteractiveLegendCards() {
   };
 
   return (
-    <div className="absolute bottom-3 right-3 sm:bottom-3.5 sm:right-4 z-[400] hidden sm:flex flex-nowrap items-center gap-1.5 sm:gap-2 pointer-events-auto select-none">
+    <div className="absolute bottom-2.5 left-2.5 right-14 sm:left-auto sm:right-4 sm:bottom-3.5 z-[300] flex flex-nowrap items-center gap-1.5 sm:gap-2 overflow-x-auto sm:overflow-x-visible no-scrollbar p-1 pointer-events-auto select-none max-w-[calc(100%-4rem)] sm:max-w-none">
       {thresholds.map((tier) => {
         const isSelected = selectedTierFilter === tier.tier_key;
         const isHovered = hoveredTierFilter === tier.tier_key;
@@ -55,7 +55,7 @@ export default function InteractiveLegendCards() {
             onClick={() => handleCardClick(tier.tier_key)}
             onMouseEnter={() => setHoveredTierFilter(tier.tier_key)}
             onMouseLeave={() => setHoveredTierFilter(null)}
-            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border text-left transition-all backdrop-blur-md shadow-xs ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl border shrink-0 text-left transition-all backdrop-blur-md shadow-2xs ${
               isSelected || isHovered
                 ? 'bg-white border-slate-800 ring-2 ring-slate-800 shadow-md scale-105'
                 : 'bg-white/95 border-slate-200/90 hover:border-slate-400 hover:bg-white'

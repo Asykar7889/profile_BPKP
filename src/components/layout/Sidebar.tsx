@@ -29,6 +29,17 @@ export default function Sidebar() {
     setIsMobileSidebarOpen,
   } = useDashboard();
 
+  // Lock body scroll when mobile drawer is open and cleanup reliably
+  React.useEffect(() => {
+    if (isMobileSidebarOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isMobileSidebarOpen]);
+
   // Menu navigasi utama aplikasi
   const navItems = [
     { id: 'peta', label: 'Peta Utama SPI', icon: Map, href: '/' },
@@ -51,7 +62,7 @@ export default function Sidebar() {
 
       {/* 2. Main Sidebar Container (Mobile: Topmost Drawer z-[9999] | Desktop: Fixed/Collapsible z-30) */}
       <aside
-        className={`fixed inset-y-0 left-0 z-[9999] w-72 bg-white text-slate-800 flex flex-col justify-between border-r border-bpkp-border flex-shrink-0 select-none shadow-2xl transition-all duration-300 ease-in-out lg:static lg:z-30 lg:shadow-none ${
+        className={`fixed inset-y-0 left-0 z-[9999] w-72 h-dvh max-h-dvh bg-white text-slate-800 flex flex-col justify-between border-r border-bpkp-border flex-shrink-0 select-none shadow-2xl transition-all duration-300 ease-in-out lg:sticky lg:top-0 lg:h-screen lg:self-start lg:z-30 lg:shadow-none ${
           /* Mobile Drawer: Translate-X */
           isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         } ${

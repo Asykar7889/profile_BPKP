@@ -50,10 +50,23 @@ export default function AdminRiskSettingsModal() {
     }
   }, [isAdminRiskSettingsOpen, globalThresholds]);
 
-  // Guard: Only admins can view this modal
-  if (!isAdminRiskSettingsOpen || userRole !== 'admin') {
-    return null;
-  }
+  // Compute live proportional width for horizontal preview bar
+  // Top-level hook to adhere strictly to React Rules of Hooks
+  const proportionSegments = useMemo(() => {
+    return formThresholds.map((tier) => {
+      const rawSpan = Math.max(0, tier.max_score - tier.min_score);
+      // Ensure positive span for visualization
+      const span = tier.sort_order === 1 ? rawSpan : rawSpan + 0.01;
+      const widthPct = Math.max(2, Math.min(100, span));
+      const textColor = getContrastTextColor(tier.color_hex);
+
+      return {
+        ...tier,
+        widthPct,
+        textColor,
+      };
+    });
+  }, [formThresholds]);
 
   // Handle lower-bound changes with auto-linked anti-overlap
   const handleLowerBoundChange = (tierKey: string, rawVal: number) => {
@@ -94,22 +107,10 @@ export default function AdminRiskSettingsModal() {
     );
   };
 
-  // Compute live proportional width for horizontal preview bar
-  const proportionSegments = useMemo(() => {
-    return formThresholds.map((tier) => {
-      const rawSpan = Math.max(0, tier.max_score - tier.min_score);
-      // Ensure positive span for visualization
-      const span = tier.sort_order === 1 ? rawSpan : rawSpan + 0.01;
-      const widthPct = Math.max(2, Math.min(100, span));
-      const textColor = getContrastTextColor(tier.color_hex);
-
-      return {
-        ...tier,
-        widthPct,
-        textColor,
-      };
-    });
-  }, [formThresholds]);
+  // Guard: Only render modal if open and user is admin (after all hooks)
+  if (!isAdminRiskSettingsOpen || userRole !== 'admin') {
+    return null;
+  }
 
   // Submit Handler
   const handleSave = async (e: React.FormEvent) => {

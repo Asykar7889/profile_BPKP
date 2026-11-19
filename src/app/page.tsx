@@ -22,39 +22,38 @@ function DashboardBody() {
   const { activeTab } = useDashboard();
 
   return (
-    <div className="flex h-screen w-full bg-slate-100 overflow-hidden font-sans">
+    <div className="flex min-h-screen w-full bg-slate-100 font-sans">
       {/* 1. Main Navigation Sidebar (Collapsible on Desktop, Drawer on Mobile) */}
       <Sidebar />
 
       {/* 2. Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen transition-all duration-200">
         {/* Top Header Filter & RBAC Export Bar */}
         <TopFilterExportBar />
 
         {/* Dynamic Tab Body */}
-        <div className="flex-1 flex min-h-0 overflow-hidden relative">
+        <div className="flex-1 flex flex-col min-w-0 relative">
           {/* TAB 1: Peta Utama SPI */}
           {activeTab === 'peta' && (
-            <div className="flex-1 flex flex-col lg:flex-row min-w-0 h-full p-2.5 sm:p-4 gap-3 sm:gap-4 overflow-y-auto lg:overflow-hidden">
-              {/* Kolom Kiri: Highlight Summary + Peta Spasial + Tabel Peringkat */}
-              <div className="flex-1 flex flex-col min-w-0 h-full gap-3 sm:gap-4">
-                {/* 3 KPI Highlight Cards */}
-                <HighlightSummaryBar />
-
-                {/* Geospatial Map Area with Interactive 5-Card Legend & Heatmap */}
-                <div className="h-[520px] sm:h-[580px] lg:h-auto lg:flex-1 min-h-[460px] relative">
-                  <MapWrapper />
-                </div>
-
-                {/* Regional Ranking Table below map */}
-                <div className="flex-shrink-0 max-h-64 sm:max-h-72 overflow-y-auto">
-                  <RegionalRankingTable />
-                </div>
+            <div className="flex-1 flex flex-col lg:grid lg:grid-cols-12 min-w-0 p-2.5 sm:p-4 lg:p-6 gap-4 sm:gap-6">
+              {/* Order 1 on Mobile (< lg) | Col 1-8 Row 2 on Desktop (lg): Geospatial Map Area */}
+              <div className="order-1 lg:order-2 lg:col-span-8 lg:row-start-2 lg:col-start-1 h-[480px] sm:h-[540px] lg:h-[620px] min-h-[420px] relative w-full">
+                <MapWrapper />
               </div>
 
-              {/* Kolom Kanan: Semi-Circle Gauge, Dimension Breakdown & Indicator Bars */}
-              <div className="w-full lg:w-84 xl:w-96 flex-shrink-0 h-[520px] lg:h-full rounded-2xl overflow-hidden border border-slate-200/90 shadow-sm bg-white">
+              {/* Order 2 on Mobile (< lg) | Col 9-12 Rows 1-2 on Desktop (lg, sticky): City/Provincial Statistics Panel */}
+              <div className="order-2 lg:order-3 lg:col-span-4 lg:row-start-1 lg:row-span-2 lg:col-start-9 w-full lg:sticky lg:top-4 h-auto lg:h-[calc(100vh-2rem)] rounded-2xl overflow-hidden border border-slate-200/90 shadow-sm bg-white">
                 <RightScorePanel />
+              </div>
+
+              {/* Order 3 on Mobile (< lg) | Col 1-8 Row 1 on Desktop (lg): 3 KPI Highlight / Summary Cards */}
+              <div className="order-3 lg:order-1 lg:col-span-8 lg:row-start-1 lg:col-start-1 w-full">
+                <HighlightSummaryBar />
+              </div>
+
+              {/* Order 4 on Mobile (< lg) | Col 1-8 Row 3 on Desktop (lg): Regional Ranking Table */}
+              <div className="order-4 lg:order-4 lg:col-span-8 lg:row-start-3 lg:col-start-1 w-full">
+                <RegionalRankingTable />
               </div>
             </div>
           )}

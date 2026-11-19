@@ -18,7 +18,9 @@ interface DashboardContextType {
   selectedYear: number;
   summary: ProvincialSummary;
   isMainSidebarOpen: boolean;
+  isDesktopSidebarOpen: boolean;
   isMobileSidebarOpen: boolean;
+  isMobileMenuOpen: boolean;
   setActiveCity: (city: RegionData | null) => void;
   setHoveredCity: (city: RegionData | null) => void;
   setIsHeatmapActive: (val: boolean | ((prev: boolean) => boolean)) => void;
@@ -27,8 +29,10 @@ interface DashboardContextType {
   setActiveTab: (tab: string) => void;
   setSelectedYear: (year: number) => void;
   setIsMainSidebarOpen: (val: boolean | ((prev: boolean) => boolean)) => void;
+  setIsDesktopSidebarOpen: (val: boolean | ((prev: boolean) => boolean)) => void;
   setIsMobileSidebarOpen: (val: boolean | ((prev: boolean) => boolean)) => void;
   toggleMainSidebar: () => void;
+  toggleDesktopSidebar: () => void;
   resetToProvincial: () => void;
   downloadCsv: () => void;
 }
@@ -58,13 +62,29 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       if (isSupabaseConfigured && supabase) {
         try {
           const { data, error } = await supabase
-            .from('regions_data')
+            .from('city_surveys')
             .select('*')
             .eq('tahun', selectedYear)
             .order('skor_total', { ascending: false });
 
           if (!error && data && data.length > 0) {
-            setRegions(data as RegionData[]);
+            const mapped: RegionData[] = data.map((d: any) => ({
+              id: d.id,
+              kode_wilayah: d.kode_wilayah || d.city_code,
+              nama_wilayah: d.nama_wilayah || d.city_name,
+              tipe_wilayah: d.tipe_wilayah || 'Kabupaten',
+              skor_total: Number(d.skor_total ?? d.total_score ?? 0),
+              kategori_risiko: d.kategori_risiko || d.risk_category || 'Waspada',
+              indikator_internal: Number(d.internal_score ?? d.indikator_internal ?? 0),
+              indikator_eksternal: Number(d.external_score ?? d.indikator_eksternal ?? 0),
+              indikator_eksper: Number(d.expert_score ?? d.indikator_eksper ?? 0),
+              faktor_koreksi: Number(d.correction_factor ?? d.faktor_koreksi ?? 0),
+              jumlah_responden: Number(d.jumlah_responden ?? d.respondent_count ?? 150),
+              tahun: Number(d.tahun ?? d.year ?? selectedYear),
+              rekomendasi_utama: d.rekomendasi_utama || d.recommendation || '',
+              updated_at: d.updated_at,
+            }));
+            setRegions(mapped);
           } else {
             console.warn('Supabase returned empty/error, using fallback data:', error?.message);
             setRegions(SUMSEL_FALLBACK_DATA);
@@ -195,7 +215,9 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         selectedYear,
         summary,
         isMainSidebarOpen,
+        isDesktopSidebarOpen: isMainSidebarOpen,
         isMobileSidebarOpen,
+        isMobileMenuOpen: isMobileSidebarOpen,
         setActiveCity,
         setHoveredCity,
         setIsHeatmapActive,
@@ -204,8 +226,10 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         setActiveTab,
         setSelectedYear,
         setIsMainSidebarOpen,
+        setIsDesktopSidebarOpen: setIsMainSidebarOpen,
         setIsMobileSidebarOpen,
         toggleMainSidebar,
+        toggleDesktopSidebar: toggleMainSidebar,
         resetToProvincial,
         downloadCsv,
       }}

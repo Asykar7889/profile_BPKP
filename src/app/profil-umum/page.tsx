@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import React from 'react';
 import Link from 'next/link';
-import { DashboardProvider } from '@/context/DashboardContext';
+import { DashboardProvider, useDashboard } from '@/context/DashboardContext';
 import { SpiDashboardProvider } from '@/context/SpiDashboardContext';
 import Sidebar from '@/components/layout/Sidebar';
 import BpkpLogo from '@/components/common/BpkpLogo';
@@ -22,22 +22,50 @@ import {
   FileCheck2,
   Scale,
   Award,
+  PanelLeftOpen,
+  Menu,
 } from 'lucide-react';
 
 function ProfilUmumContent() {
   const websiteChannel = OFFICIAL_BPKP_CHANNELS.find((c) => c.platform === 'website')!;
   const socialChannels = OFFICIAL_BPKP_CHANNELS.filter((c) => c.platform !== 'website');
+  const { isMainSidebarOpen, isDesktopSidebarOpen, toggleMainSidebar, setIsMobileSidebarOpen } = useDashboard();
+  const isSidebarOpen = isDesktopSidebarOpen ?? isMainSidebarOpen;
 
   return (
-    <div className="flex h-screen w-full bg-slate-100 overflow-hidden font-sans">
+    <div className="flex min-h-screen w-full bg-slate-100 font-sans">
       {/* 1. Main Navigation Sidebar (Collapsible on Desktop, Drawer on Mobile) */}
       <Sidebar />
 
       {/* 2. Main Scrollable Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-bpkp-surface">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen bg-bpkp-surface transition-all duration-200">
         {/* Top Breadcrumb & Quick Action Bar */}
         <header className="h-14 sm:h-16 px-4 sm:px-6 bg-white border-b border-bpkp-border flex items-center justify-between flex-shrink-0 z-20">
           <div className="flex items-center gap-2 text-xs text-slate-500">
+            {/* Desktop Reopen Sidebar Button */}
+            {!isSidebarOpen && (
+              <button
+                type="button"
+                onClick={toggleMainSidebar}
+                className="hidden lg:inline-flex p-1.5 rounded-xl border border-slate-200 text-slate-700 hover:text-bpkp-blue hover:bg-slate-100 transition min-w-[34px] min-h-[34px] items-center justify-center mr-1 shadow-2xs"
+                title="Buka Menu Sidebar"
+                aria-label="Buka Menu Sidebar"
+              >
+                <PanelLeftOpen className="w-4 h-4" />
+              </button>
+            )}
+
+            {/* Mobile Drawer Button */}
+            <button
+              type="button"
+              onClick={() => setIsMobileSidebarOpen((prev) => !prev)}
+              className="lg:hidden p-1.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 transition min-w-[34px] min-h-[34px] flex items-center justify-center mr-1"
+              title="Buka Navigasi"
+              aria-label="Buka Menu"
+            >
+              <Menu className="w-4 h-4" />
+            </button>
+
             <Link
               href="/"
               className="flex items-center gap-1.5 font-bold text-slate-700 hover:text-bpkp-blue transition-colors px-2.5 py-1.5 rounded-lg hover:bg-slate-100"
