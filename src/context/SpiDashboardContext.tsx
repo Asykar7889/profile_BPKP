@@ -53,7 +53,7 @@ interface SpiDashboardContextType {
   openPegawaiInputForCity: (city?: CitySurvey | null) => void;
   loginUser: (role: 'pegawai' | 'admin', name?: string, email?: string) => void;
   logoutUser: () => void;
-  saveAndPublishSurvey: (updatedSurvey: CitySurvey, pegawaiName?: string) => Promise<boolean>;
+  saveAndPublishSurvey: (updatedSurvey: CitySurvey, pegawaiName?: string, notes?: string) => Promise<boolean>;
   rollbackSurvey: (logId: string) => Promise<boolean>;
   updateThresholds: (newThresholds: RiskThreshold[]) => Promise<boolean>;
   resetToProvince: () => void;
@@ -243,24 +243,32 @@ export function SpiDashboardProvider({ children }: { children: React.ReactNode }
   }, [activeCity, surveys]);
 
   // Real-Time Auto-Publish Survey
-  const saveAndPublishSurvey = useCallback(async (updatedSurvey: CitySurvey, pegawaiName?: string): Promise<boolean> => {
+  const saveAndPublishSurvey = useCallback(async (updatedSurvey: CitySurvey, pegawaiName?: string, notes?: string): Promise<boolean> => {
     try {
       setIsLoading(true);
       const oldSurvey = surveys.find((s) => s.kode_wilayah === updatedSurvey.kode_wilayah) || updatedSurvey;
+
+      const actionNotes = notes || (currentUser?.role === 'admin' ? 'Pembaruan statistik wilayah oleh Administrator BPKP.' : 'Pembaruan data indikator SPI manual oleh pegawai.');
 
       const newLog: InputHistoryLog = {
         id: `log-${Date.now()}`,
         survey_id: updatedSurvey.id,
         kode_wilayah: updatedSurvey.kode_wilayah,
+        city_code: updatedSurvey.kode_wilayah,
         nama_wilayah: updatedSurvey.nama_wilayah,
+        city_name: updatedSurvey.nama_wilayah,
         tahun: updatedSurvey.tahun,
+        year: updatedSurvey.tahun,
         pegawai_id: currentUser?.id || 'usr-pegawai-1',
         nama_pegawai: pegawaiName || currentUser?.full_name || 'Pegawai Input Lapangan',
         action_type: currentUser?.role === 'admin' ? 'EDIT_ADMIN' : 'UPDATE',
         skor_lama: oldSurvey.skor_total,
+        old_score: oldSurvey.skor_total,
         kategori_lama: oldSurvey.kategori_risiko,
         skor_baru: updatedSurvey.skor_total,
+        new_score: updatedSurvey.skor_total,
         kategori_baru: updatedSurvey.kategori_risiko,
+        notes: actionNotes,
         old_payload: oldSurvey,
         new_payload: updatedSurvey,
         created_at: new Date().toISOString(),
@@ -302,6 +310,9 @@ export function SpiDashboardProvider({ children }: { children: React.ReactNode }
           kategori_risiko: updatedSurvey.kategori_risiko,
           respondent_count: updatedSurvey.jumlah_responden,
           jumlah_responden: updatedSurvey.jumlah_responden,
+          recommendation: updatedSurvey.rekomendasi_utama || 'Tingkatkan pengawasan dan kepatuhan sistem integritas.',
+          rekomendasi_utama: updatedSurvey.rekomendasi_utama || 'Tingkatkan pengawasan dan kepatuhan sistem integritas.',
+          updated_by: currentUser?.id,
           updated_at: new Date().toISOString(),
         });
 
@@ -318,9 +329,12 @@ export function SpiDashboardProvider({ children }: { children: React.ReactNode }
           nama_pegawai: newLog.nama_pegawai,
           action_type: newLog.action_type,
           skor_lama: oldSurvey.skor_total,
+          old_score: oldSurvey.skor_total,
           kategori_lama: oldSurvey.kategori_risiko,
           skor_baru: updatedSurvey.skor_total,
+          new_score: updatedSurvey.skor_total,
           kategori_baru: updatedSurvey.kategori_risiko,
+          notes: actionNotes,
           old_payload: oldSurvey,
           new_payload: updatedSurvey,
           created_at: newLog.created_at,

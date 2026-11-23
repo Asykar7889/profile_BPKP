@@ -58,6 +58,8 @@ export interface CitySurvey {
   updated_by?: string;
   updated_at?: string;
   dimensions: SurveyDimension[];
+  recommendation?: string;
+  rekomendasi_utama?: string;
 }
 
 export type ActionType = 'CREATE' | 'UPDATE' | 'EDIT_ADMIN' | 'REVERT';

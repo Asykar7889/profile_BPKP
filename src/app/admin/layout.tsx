@@ -55,7 +55,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const isAturRisiko = pathname === '/admin/atur-risiko';
   const isAuditLog = pathname === '/admin/audit-log';
-  const pageTitle = isAturRisiko ? 'Pengaturan Tingkat Risiko' : isAuditLog ? 'Audit Log Perubahan' : 'Portal Administrator';
+  const isStatistikWilayah = pathname === '/admin/statistik-wilayah';
+  const pageTitle = isAturRisiko
+    ? 'Pengaturan Tingkat Risiko'
+    : isAuditLog
+    ? 'Audit Log Perubahan'
+    : isStatistikWilayah
+    ? 'Ubah Statistik Wilayah'
+    : 'Portal Administrator';
 
   return (
     <div className="flex min-h-screen w-full bg-slate-100 font-sans">

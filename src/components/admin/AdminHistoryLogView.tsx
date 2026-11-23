@@ -8,7 +8,6 @@ import {
   X,
   History,
   RotateCcw,
-  Edit3,
   Search,
   Filter,
   CheckCircle2,
@@ -29,7 +28,6 @@ export default function AdminHistoryLogView({ isPage = false }: AdminHistoryLogV
     historyLogs,
     isAdminHistoryOpen,
     setIsAdminHistoryOpen,
-    openPegawaiInputForCity,
     rollbackSurvey,
     surveys,
     thresholds,
@@ -74,14 +72,6 @@ export default function AdminHistoryLogView({ isPage = false }: AdminHistoryLogV
         text: 'Gagal melakukan rollback data.',
         type: 'error',
       });
-    }
-  };
-
-  const handleDirectEdit = (kodeWilayah: string) => {
-    const targetCity = surveys.find((s) => s.kode_wilayah === kodeWilayah);
-    if (targetCity) {
-      setIsAdminHistoryOpen(false);
-      openPegawaiInputForCity(targetCity);
     }
   };
 
@@ -184,7 +174,7 @@ export default function AdminHistoryLogView({ isPage = false }: AdminHistoryLogV
                     <th className="py-3 px-4">Wilayah & Tahun</th>
                     <th className="py-3 px-4">Tipe Aksi</th>
                     <th className="py-3 px-4">Komparasi Skor (Lama $\rightarrow$ Baru)</th>
-                    <th className="py-3 px-4 text-right">Aksi Admin</th>
+                    <th className="py-3 px-4 text-right">Aksi Rollback</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
@@ -273,19 +263,9 @@ export default function AdminHistoryLogView({ isPage = false }: AdminHistoryLogV
                           </div>
                         </td>
 
-                        {/* Aksi Admin: Edit & Rollback */}
+                        {/* Aksi Admin: Rollback Saja */}
                         <td className="py-3 px-4 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {/* Direct Edit Button */}
-                            <button
-                              onClick={() => handleDirectEdit(log.kode_wilayah)}
-                              className="px-2.5 py-1 rounded-lg border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1 transition-colors"
-                              title="Edit indikator wilayah ini"
-                            >
-                              <Edit3 className="w-3 h-3 text-slate-500" />
-                              <span>Edit</span>
-                            </button>
-
+                          <div className="flex items-center justify-end">
                             {/* Rollback Button */}
                             {confirmRollbackId === log.id ? (
                               <div className="flex items-center gap-1 bg-rose-50 p-1 rounded-lg border border-rose-200">

@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useCallback } from 'react';
 import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 import { useDashboard } from '@/context/DashboardContext';
 import { useSpiDashboard } from '@/context/SpiDashboardContext';
 import { SUMSEL_GEOJSON } from '@/data/sumselGeoJson';
