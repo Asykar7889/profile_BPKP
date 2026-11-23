@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import AppProviders from '@/components/providers/AppProviders';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -17,7 +18,9 @@ export default function RootLayout({
   return (
     <html lang="id" className="overflow-x-clip">
       <body className={`${inter.className} min-h-screen antialiased bg-slate-50 text-slate-900 overflow-x-clip`}>
-        {children}
+        <AppProviders>
+          {children}
+        </AppProviders>
       </body>
     </html>
   );

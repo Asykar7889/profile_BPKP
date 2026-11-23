@@ -88,6 +88,48 @@ export function SpiDashboardProvider({ children }: { children: React.ReactNode }
 
   const userRole: UserRole = currentUser ? currentUser.role : 'public';
 
+  // Hydrate user profile from localStorage and Supabase session on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('bpkp_user_profile');
+      if (saved) {
+        setCurrentUser(JSON.parse(saved));
+      }
+    } catch {}
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.auth.getSession().then(({ data }) => {
+        if (data.session?.user) {
+          const meta = data.session.user.user_metadata || {};
+          const role: 'pegawai' | 'admin' = meta.role === 'pegawai' ? 'pegawai' : 'admin';
+          const user: UserProfile = {
+            id: data.session.user.id,
+            email: data.session.user.email || '',
+            full_name: meta.full_name || 'Admin BPKP',
+            role,
+          };
+          setCurrentUser(user);
+          try {
+            localStorage.setItem('bpkp_user_profile', JSON.stringify(user));
+          } catch {}
+        }
+      });
+
+      const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (!session) {
+          setCurrentUser(null);
+          try {
+            localStorage.removeItem('bpkp_user_profile');
+          } catch {}
+        }
+      });
+
+      return () => {
+        authListener.subscription.unsubscribe();
+      };
+    }
+  }, []);
+
   // Load dynamic thresholds on mount
   useEffect(() => {
     async function loadDynamicThresholds() {
@@ -174,12 +216,21 @@ export function SpiDashboardProvider({ children }: { children: React.ReactNode }
       role,
     };
     setCurrentUser(demoUser);
+    try {
+      localStorage.setItem('bpkp_user_profile', JSON.stringify(demoUser));
+    } catch {}
     setIsAuthModalOpen(false);
   }, []);
 
   // Logout handler
   const logoutUser = useCallback(() => {
     setCurrentUser(null);
+    try {
+      localStorage.removeItem('bpkp_user_profile');
+    } catch {}
+    if (isSupabaseConfigured && supabase) {
+      supabase.auth.signOut().catch(() => {});
+    }
     setIsPegawaiInputOpen(false);
     setIsAdminHistoryOpen(false);
     setIsAdminRiskSettingsOpen(false);

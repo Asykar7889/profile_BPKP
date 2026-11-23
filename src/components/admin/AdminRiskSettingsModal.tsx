@@ -24,7 +24,11 @@ import {
   Info,
 } from 'lucide-react';
 
-export default function AdminRiskSettingsModal() {
+interface AdminRiskSettingsProps {
+  isPage?: boolean;
+}
+
+export default function AdminRiskSettingsModal({ isPage = false }: AdminRiskSettingsProps) {
   const {
     thresholds: globalThresholds,
     updateThresholds,
@@ -40,15 +44,15 @@ export default function AdminRiskSettingsModal() {
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  // Sync with global thresholds when opened
+  // Sync with global thresholds when opened or in page mode
   useEffect(() => {
-    if (isAdminRiskSettingsOpen) {
+    if (isPage || isAdminRiskSettingsOpen) {
       setFormThresholds(globalThresholds);
       setValidationError(null);
       setSuccessToast(null);
       setShowResetConfirm(false);
     }
-  }, [isAdminRiskSettingsOpen, globalThresholds]);
+  }, [isPage, isAdminRiskSettingsOpen, globalThresholds]);
 
   // Compute live proportional width for horizontal preview bar
   // Top-level hook to adhere strictly to React Rules of Hooks
@@ -107,8 +111,8 @@ export default function AdminRiskSettingsModal() {
     );
   };
 
-  // Guard: Only render modal if open and user is admin (after all hooks)
-  if (!isAdminRiskSettingsOpen || userRole !== 'admin') {
+  // Guard: Only render if open (or in page mode) and user is admin (after all hooks)
+  if ((!isPage && !isAdminRiskSettingsOpen) || userRole !== 'admin') {
     return null;
   }
 
@@ -131,7 +135,7 @@ export default function AdminRiskSettingsModal() {
       setSuccessToast('Konfigurasi tingkat risiko berhasil disimpan dan dipublikasikan!');
       setTimeout(() => {
         setSuccessToast(null);
-        setIsAdminRiskSettingsOpen(false);
+        if (!isPage) setIsAdminRiskSettingsOpen(false);
       }, 1800);
     } else {
       setValidationError('Gagal menyimpan perubahan ke server. Silakan coba kembali.');
@@ -156,33 +160,35 @@ export default function AdminRiskSettingsModal() {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[1000] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200">
-      <div
-        className="w-full max-w-4xl max-h-[92vh] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden relative"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white p-5 sm:p-6 flex items-center justify-between relative flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
-              <Sliders className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-base sm:text-lg text-white">
-                  Pengaturan Tingkat Risiko Dinamis (5-Tier SPI)
-                </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-indigo-500/20 text-indigo-200 border border-indigo-400/30">
-                  Admin Control
-                </span>
-              </div>
-              <p className="text-xs text-indigo-200">
-                Atur ambang batas skor, label kategori, dan palet warna peta secara terpusat tanpa redeploy
-              </p>
-            </div>
+  const modalBody = (
+    <div
+      className={`w-full max-w-5xl mx-auto bg-white rounded-3xl border border-slate-200 flex flex-col overflow-hidden relative ${
+        isPage ? 'shadow-sm max-h-none' : 'max-h-[92vh] shadow-2xl'
+      }`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Header */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white p-5 sm:p-6 flex items-center justify-between relative flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
+            <Sliders className="w-5 h-5" />
           </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-base sm:text-lg text-white">
+                Pengaturan Tingkat Risiko Dinamis (5-Tier SPI)
+              </h3>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-indigo-500/20 text-indigo-200 border border-indigo-400/30">
+                Admin Control
+              </span>
+            </div>
+            <p className="text-xs text-indigo-200">
+              Atur ambang batas skor, label kategori, dan palet warna peta secara terpusat tanpa redeploy
+            </p>
+          </div>
+        </div>
 
+        {!isPage && (
           <button
             onClick={() => setIsAdminRiskSettingsOpen(false)}
             className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition-colors"
@@ -190,7 +196,8 @@ export default function AdminRiskSettingsModal() {
           >
             <X className="w-4 h-4" />
           </button>
-        </div>
+        )}
+      </div>
 
         {/* Success Alert */}
         {successToast && (
@@ -450,13 +457,15 @@ export default function AdminRiskSettingsModal() {
 
             {/* Cancel & Save Buttons */}
             <div className="flex items-center gap-2.5 w-full sm:w-auto">
-              <button
-                type="button"
-                onClick={() => setIsAdminRiskSettingsOpen(false)}
-                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-100 transition-colors"
-              >
-                Batal
-              </button>
+              {!isPage && (
+                <button
+                  type="button"
+                  onClick={() => setIsAdminRiskSettingsOpen(false)}
+                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-100 transition-colors"
+                >
+                  Batal
+                </button>
+              )}
               <button
                 type="submit"
                 disabled={isSubmitting}
@@ -469,6 +478,15 @@ export default function AdminRiskSettingsModal() {
           </div>
         </form>
       </div>
+  );
+
+  if (isPage) {
+    return <div className="w-full flex justify-center">{modalBody}</div>;
+  }
+
+  return (
+    <div className="fixed inset-0 z-[1000] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200">
+      {modalBody}
     </div>
   );
 }

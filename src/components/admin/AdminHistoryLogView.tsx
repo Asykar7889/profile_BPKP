@@ -20,7 +20,11 @@ import {
   User,
 } from 'lucide-react';
 
-export default function AdminHistoryLogView() {
+interface AdminHistoryLogViewProps {
+  isPage?: boolean;
+}
+
+export default function AdminHistoryLogView({ isPage = false }: AdminHistoryLogViewProps) {
   const {
     historyLogs,
     isAdminHistoryOpen,
@@ -51,7 +55,7 @@ export default function AdminHistoryLogView() {
     });
   }, [historyLogs, searchQuery, actionFilter]);
 
-  if (!isAdminHistoryOpen) return null;
+  if (!isPage && !isAdminHistoryOpen) return null;
 
   const handleTriggerRollback = async (log: InputHistoryLog) => {
     setIsProcessing(true);
@@ -81,40 +85,43 @@ export default function AdminHistoryLogView() {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[1000] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200">
-      <div
-        className="w-full max-w-5xl max-h-[92vh] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden relative"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white p-5 sm:p-6 flex items-center justify-between relative flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
-              <History className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-base sm:text-lg text-white">
-                  Audit Log & History Input Survei SPI
-                </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-indigo-500/20 text-indigo-200 border border-indigo-400/30">
-                  Role: Admin BPKP
-                </span>
-              </div>
-              <p className="text-xs text-indigo-200">
-                Pencatatan Audit Trail Immutable, Komparasi Skor Lama vs Baru & Kontrol Rollback
-              </p>
-            </div>
+  const bodyContent = (
+    <div
+      className={`w-full max-w-5xl mx-auto bg-white rounded-3xl border border-slate-200 flex flex-col overflow-hidden relative ${
+        isPage ? 'shadow-sm max-h-none' : 'max-h-[92vh] shadow-2xl'
+      }`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Header */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white p-5 sm:p-6 flex items-center justify-between relative flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
+            <History className="w-5 h-5" />
           </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-base sm:text-lg text-white">
+                Audit Log & History Input Survei SPI
+              </h3>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-indigo-500/20 text-indigo-200 border border-indigo-400/30">
+                Role: Admin BPKP
+              </span>
+            </div>
+            <p className="text-xs text-indigo-200">
+              Pencatatan Audit Trail Immutable, Komparasi Skor Lama vs Baru & Kontrol Rollback
+            </p>
+          </div>
+        </div>
 
+        {!isPage && (
           <button
             onClick={() => setIsAdminHistoryOpen(false)}
             className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
-        </div>
+        )}
+      </div>
 
         {/* Feedback Alert */}
         {feedbackMsg && (
@@ -329,14 +336,25 @@ export default function AdminHistoryLogView() {
             </span>
           </div>
 
-          <button
-            onClick={() => setIsAdminHistoryOpen(false)}
-            className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold transition-colors"
-          >
-            Tutup
-          </button>
+          {!isPage && (
+            <button
+              onClick={() => setIsAdminHistoryOpen(false)}
+              className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold transition-colors"
+            >
+              Tutup
+            </button>
+          )}
         </div>
       </div>
+  );
+
+  if (isPage) {
+    return <div className="w-full flex justify-center">{bodyContent}</div>;
+  }
+
+  return (
+    <div className="fixed inset-0 z-[1000] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200">
+      {bodyContent}
     </div>
   );
 }

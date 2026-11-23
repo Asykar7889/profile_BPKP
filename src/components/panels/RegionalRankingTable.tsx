@@ -89,7 +89,7 @@ export default function RegionalRankingTable() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
         <div>
           <h3 className="text-sm font-bold text-slate-800">
-            Peringkat & Tabulasi Integritas Wilayah
+            Peringkat Integritas 17 Wilayah
           </h3>
           <p className="text-xs text-slate-500">
             Daftar 17 Kabupaten/Kota di Sumatera Selatan diurutkan berdasarkan skor SPI

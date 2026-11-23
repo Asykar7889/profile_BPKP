@@ -4,10 +4,10 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useDashboard } from '@/context/DashboardContext';
+import { useOptionalSpiDashboard } from '@/context/SpiDashboardContext';
 import BpkpLogo from '@/components/common/BpkpLogo';
 import {
   Map,
-  FileSpreadsheet,
   Building2,
   History,
   Download,
@@ -15,6 +15,8 @@ import {
   HelpCircle,
   X,
   PanelLeftClose,
+  SlidersHorizontal,
+  ShieldCheck,
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -28,6 +30,9 @@ export default function Sidebar() {
     isMobileSidebarOpen,
     setIsMobileSidebarOpen,
   } = useDashboard();
+
+  const spiCtx = useOptionalSpiDashboard();
+  const userRole = spiCtx?.userRole || 'public';
 
   // Lock body scroll when mobile drawer is open and cleanup reliably
   React.useEffect(() => {
@@ -44,7 +49,6 @@ export default function Sidebar() {
   const navItems = [
     { id: 'peta', label: 'Peta Utama SPI', icon: Map, href: '/' },
     { id: 'wilayah', label: 'Hasil Wilayah', icon: Building2, href: '/' },
-    { id: 'tabulasi', label: 'Tabulasi Instansi', icon: FileSpreadsheet, href: '/' },
     { id: 'profil_umum', label: 'Profil Umum BPKP', icon: Building2, href: '/profil-umum' },
     { id: 'historis', label: 'Data Historis', icon: History, href: '/' },
     { id: 'tindak_lanjut', label: 'Tindak Lanjut', icon: CheckSquare, href: '/' },
@@ -120,11 +124,12 @@ export default function Sidebar() {
             </p>
             {navItems.map((item) => {
               const Icon = item.icon;
+              const isMainPage = pathname === '/';
               const isProfilPage = pathname === '/profil-umum';
               const isActive =
                 item.id === 'profil_umum'
-                  ? isProfilPage || (pathname === '/' && activeTab === 'profil_umum')
-                  : !isProfilPage && activeTab === item.id;
+                  ? isProfilPage || (isMainPage && activeTab === 'profil_umum')
+                  : isMainPage && activeTab === item.id;
 
               const activeStyles = isActive
                 ? 'bg-bpkp-blueSoft text-bpkp-blue border-l-4 border-bpkp-blue font-bold shadow-2xs'
@@ -148,8 +153,8 @@ export default function Sidebar() {
                 );
               }
 
-              // Other items when on /profil-umum route back to / via next/link
-              if (isProfilPage) {
+              // Other items when NOT on main page route back to / via next/link
+              if (!isMainPage) {
                 return (
                   <Link
                     key={item.id}
@@ -181,6 +186,53 @@ export default function Sidebar() {
                 </button>
               );
             })}
+
+            {/* Dedicated MENU ADMIN (Rendered strictly when userRole === 'admin') */}
+            {userRole === 'admin' && (
+              <div className="pt-3">
+                <div className="px-3 pt-2 pb-1 flex items-center justify-between">
+                  <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
+                    <ShieldCheck className="w-3 h-3 text-indigo-600" />
+                    <span>Menu Admin</span>
+                  </p>
+                  <span className="text-[9px] px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-md font-extrabold uppercase">
+                    Admin
+                  </span>
+                </div>
+
+                {/* 1. Atur Risiko */}
+                <Link
+                  href="/admin/atur-risiko"
+                  onClick={() => setIsMobileSidebarOpen(false)}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold min-h-[44px] transition-all ${
+                    pathname === '/admin/atur-risiko'
+                      ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold shadow-2xs'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  }`}
+                >
+                  <SlidersHorizontal
+                    className={`w-4 h-4 ${pathname === '/admin/atur-risiko' ? 'text-indigo-600' : 'text-slate-400'}`}
+                  />
+                  <span>Atur Risiko</span>
+                </Link>
+
+                {/* 2. Audit Log */}
+                <Link
+                  href="/admin/audit-log"
+                  onClick={() => setIsMobileSidebarOpen(false)}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold min-h-[44px] transition-all ${
+                    pathname === '/admin/audit-log'
+                      ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 font-bold shadow-2xs'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  }`}
+                >
+                  <History
+                    className={`w-4 h-4 ${pathname === '/admin/audit-log' ? 'text-indigo-600' : 'text-slate-400'}`}
+                  />
+                  <span>Audit Log</span>
+                </Link>
+              </div>
+            )}
 
             <p className="px-3 pt-4 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
               Aksi & Ekspor

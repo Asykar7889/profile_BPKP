@@ -3,8 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import React from 'react';
-import { DashboardProvider, useDashboard } from '@/context/DashboardContext';
-import { SpiDashboardProvider, useSpiDashboard } from '@/context/SpiDashboardContext';
+import { useDashboard } from '@/context/DashboardContext';
 import Sidebar from '@/components/layout/Sidebar';
 import TopFilterExportBar from '@/components/dashboard/TopFilterExportBar';
 import HighlightSummaryBar from '@/components/dashboard/HighlightSummaryBar';
@@ -75,22 +74,7 @@ function DashboardBody() {
             </div>
           )}
 
-          {/* TAB 3: Tabulasi Instansi */}
-          {activeTab === 'tabulasi' && (
-            <div className="flex-1 p-4 sm:p-6 overflow-y-auto">
-              <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6">
-                <div>
-                  <h2 className="text-lg sm:text-xl font-black text-slate-800">Tabulasi Instansi & Responden</h2>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Distribusi responden dan faktor koreksi per instansi pemerintah daerah.
-                  </p>
-                </div>
-                <RegionalRankingTable />
-              </div>
-            </div>
-          )}
-
-          {/* TAB 4: Profil Umum BPKP */}
+          {/* TAB 3: Profil Umum BPKP */}
           {activeTab === 'profil_umum' && <ProfilUmumBpkp />}
 
           {/* TAB 5: Data Historis */}
@@ -157,11 +141,5 @@ function DashboardBody() {
 }
 
 export default function Page() {
-  return (
-    <DashboardProvider>
-      <SpiDashboardProvider>
-        <DashboardBody />
-      </SpiDashboardProvider>
-    </DashboardProvider>
-  );
+  return <DashboardBody />;
 }

@@ -4,8 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import React from 'react';
 import Link from 'next/link';
-import { DashboardProvider, useDashboard } from '@/context/DashboardContext';
-import { SpiDashboardProvider } from '@/context/SpiDashboardContext';
+import { useDashboard } from '@/context/DashboardContext';
 import Sidebar from '@/components/layout/Sidebar';
 import BpkpLogo from '@/components/common/BpkpLogo';
 import OfficialChannelCard from '@/components/OfficialChannelCard';
@@ -389,11 +388,5 @@ function ProfilUmumContent() {
 }
 
 export default function ProfilUmumPage() {
-  return (
-    <DashboardProvider>
-      <SpiDashboardProvider>
-        <ProfilUmumContent />
-      </SpiDashboardProvider>
-    </DashboardProvider>
-  );
+  return <ProfilUmumContent />;
 }

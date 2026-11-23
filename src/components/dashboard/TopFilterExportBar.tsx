@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import { useSpiDashboard } from '@/context/SpiDashboardContext';
 import { useDashboard } from '@/context/DashboardContext';
 import BpkpLogo from '@/components/common/BpkpLogo';
@@ -246,22 +247,22 @@ export default function TopFilterExportBar() {
 
           {userRole === 'admin' && (
             <>
-              <button
-                onClick={() => setIsAdminHistoryOpen(true)}
+              <Link
+                href="/admin/audit-log"
                 className="px-2.5 py-1 rounded-lg bg-purple-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs hover:bg-purple-700 transition"
                 title="Lihat Riwayat Audit Perubahan Nilai"
               >
                 <History className="w-3.5 h-3.5" />
                 <span>Audit Log</span>
-              </button>
-              <button
-                onClick={() => setIsAdminRiskSettingsOpen(true)}
+              </Link>
+              <Link
+                href="/admin/atur-risiko"
                 className="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs hover:bg-indigo-700 transition"
                 title="Pengaturan Ambang Batas & Warna Tingkat Risiko (Dynamic Risk Thresholds)"
               >
                 <Sliders className="w-3.5 h-3.5" />
                 <span>Atur Risiko</span>
-              </button>
+              </Link>
             </>
           )}
 
