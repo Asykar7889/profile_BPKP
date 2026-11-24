@@ -20,7 +20,12 @@ import {
   FilePenLine,
   ClipboardPenLine,
   UserCheck,
+  FileSpreadsheet,
+  FileText,
+  LogIn,
+  LogOut,
 } from 'lucide-react';
+import { formatScore } from '@/lib/scoringEngine';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -36,6 +41,61 @@ export default function Sidebar() {
 
   const spiCtx = useOptionalSpiDashboard();
   const userRole = spiCtx?.userRole || 'public';
+
+  // Excel (CSV formatted) export respecting active year and surveys
+  const handleDownloadExcel = () => {
+    const activeSurveys = spiCtx?.surveys && spiCtx.surveys.length > 0 ? spiCtx.surveys : [];
+    const activeYear = spiCtx?.selectedYear || 2026;
+
+    const headers = [
+      'Kode Wilayah',
+      'Nama Wilayah',
+      'Tipe',
+      'Tahun',
+      'Skor Total SPI',
+      'Kategori Risiko',
+      'Skor Internal (35%)',
+      'Skor Eksternal (35%)',
+      'Skor Eksper (30%)',
+      'Faktor Koreksi',
+      'Jumlah Responden',
+    ];
+
+    const rows = activeSurveys.map((s) => {
+      const internal = s.dimensions?.find((d) => d.kode_dimensi === 'internal')?.skor_dimensi || 0;
+      const eksternal = s.dimensions?.find((d) => d.kode_dimensi === 'eksternal')?.skor_dimensi || 0;
+      const eksper = s.dimensions?.find((d) => d.kode_dimensi === 'eksper')?.skor_dimensi || 0;
+      const koreksi = s.dimensions?.find((d) => d.kode_dimensi === 'faktor_koreksi')?.skor_dimensi || 0;
+
+      return [
+        `"${s.kode_wilayah}"`,
+        `"${s.nama_wilayah}"`,
+        `"${s.tipe_wilayah}"`,
+        s.tahun,
+        formatScore(s.skor_total),
+        `"${s.kategori_risiko}"`,
+        formatScore(internal),
+        formatScore(eksternal),
+        formatScore(eksper),
+        formatScore(koreksi),
+        s.jumlah_responden,
+      ].join(',');
+    });
+
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `SPI_Sumsel_${activeYear}_Export.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // PDF / Print Handler
+  const handlePrintPdf = () => {
+    window.print();
+  };
 
   // Lock body scroll when mobile drawer is open and cleanup reliably
   React.useEffect(() => {
@@ -304,17 +364,101 @@ export default function Sidebar() {
               Aksi & Ekspor
             </p>
 
+            {/* 1. Ekspor Excel */}
+            <button
+              onClick={() => {
+                handleDownloadExcel();
+                setIsMobileSidebarOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition-all border border-emerald-200 min-h-[44px]"
+              title="Download Rekap Skor Excel / CSV"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+              <span>Ekspor Excel</span>
+            </button>
+
+            {/* 2. Ekspor PDF */}
+            <button
+              onClick={() => {
+                handlePrintPdf();
+                setIsMobileSidebarOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-blue-700 hover:bg-blue-50 transition-all border border-blue-200 min-h-[44px]"
+              title="Cetak Dokumen / Ekspor PDF"
+            >
+              <FileText className="w-4 h-4 text-blue-600" />
+              <span>Ekspor PDF</span>
+            </button>
+
+            {/* 3. Unduh Data (CSV) */}
             <button
               onClick={() => {
                 downloadCsv();
                 setIsMobileSidebarOpen(false);
               }}
-              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-bpkp-blue hover:bg-bpkp-blueSoft transition-all border border-bpkp-blueBorder min-h-[44px]"
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-all border border-slate-200 min-h-[44px]"
+              title="Unduh Data Mentah CSV"
             >
-              <Download className="w-4 h-4 text-bpkp-blue" />
+              <Download className="w-4 h-4 text-slate-600" />
               <span>Unduh Data (CSV)</span>
             </button>
           </nav>
+
+          {/* Mobile-Only Auth & Session Block (Strictly lg:hidden) */}
+          <div className="lg:hidden p-3 border-t border-slate-200 bg-slate-50">
+            {userRole === 'public' ? (
+              <button
+                onClick={() => {
+                  setIsMobileSidebarOpen(false);
+                  if (spiCtx?.setIsAuthModalOpen) {
+                    spiCtx.setIsAuthModalOpen(true);
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition shadow-xs min-h-[44px]"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Login</span>
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-xl">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <UserCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                    <div className="min-w-0">
+                      <span className="text-xs font-bold text-slate-800 truncate block">
+                        {spiCtx?.currentUser?.full_name || 'Pengguna BPKP'}
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-medium truncate block">
+                        {spiCtx?.currentUser?.email || (userRole === 'admin' ? 'Administrator' : 'Pegawai SPI')}
+                      </span>
+                    </div>
+                  </div>
+                  <span
+                    className={`text-[9px] px-2 py-0.5 rounded-md font-extrabold uppercase shrink-0 ${
+                      userRole === 'admin'
+                        ? 'bg-indigo-100 text-indigo-700'
+                        : 'bg-blue-100 text-blue-700'
+                    }`}
+                  >
+                    {userRole}
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setIsMobileSidebarOpen(false);
+                    if (spiCtx?.logoutUser) {
+                      spiCtx.logoutUser();
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold transition min-h-[44px]"
+                >
+                  <LogOut className="w-4 h-4 text-red-600" />
+                  <span>Logout</span>
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Footer Info */}
           <div className="p-4 border-t border-bpkp-border bg-slate-50 text-[11px] text-slate-500 space-y-1">

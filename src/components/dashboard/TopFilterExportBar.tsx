@@ -8,13 +8,8 @@ import BpkpLogo from '@/components/common/BpkpLogo';
 import {
   Search,
   Calendar,
-  Download,
-  FileText,
-  Printer,
   LogIn,
   LogOut,
-  UserCheck,
-  ShieldAlert,
   X,
   Menu,
   PanelLeftOpen,
@@ -70,58 +65,6 @@ export default function TopFilterExportBar() {
     setActiveCity(city);
     setSearchQuery(city.nama_wilayah);
     setIsDropdownOpen(false);
-  };
-
-  // Client-Side CSV Export (Excel compatible)
-  const handleDownloadExcel = () => {
-    const headers = [
-      'Kode Wilayah',
-      'Nama Wilayah',
-      'Tipe',
-      'Tahun',
-      'Skor Total SPI',
-      'Kategori Risiko',
-      'Skor Internal (35%)',
-      'Skor Eksternal (35%)',
-      'Skor Eksper (30%)',
-      'Faktor Koreksi',
-      'Jumlah Responden',
-    ];
-
-    const rows = surveys.map((s) => {
-      const internal = s.dimensions.find((d) => d.kode_dimensi === 'internal')?.skor_dimensi || 0;
-      const eksternal = s.dimensions.find((d) => d.kode_dimensi === 'eksternal')?.skor_dimensi || 0;
-      const eksper = s.dimensions.find((d) => d.kode_dimensi === 'eksper')?.skor_dimensi || 0;
-      const koreksi = s.dimensions.find((d) => d.kode_dimensi === 'faktor_koreksi')?.skor_dimensi || 0;
-
-      return [
-        `"${s.kode_wilayah}"`,
-        `"${s.nama_wilayah}"`,
-        `"${s.tipe_wilayah}"`,
-        s.tahun,
-        formatScore(s.skor_total),
-        `"${s.kategori_risiko}"`,
-        formatScore(internal),
-        formatScore(eksternal),
-        formatScore(eksper),
-        formatScore(koreksi),
-        s.jumlah_responden,
-      ].join(',');
-    });
-
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `SPI_Sumsel_${selectedYear}_Export.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // PDF / Print Handler
-  const handlePrintPdf = () => {
-    window.print();
   };
 
   // Reusable Search Input Node
@@ -194,37 +137,16 @@ export default function TopFilterExportBar() {
     </div>
   );
 
-  // Reusable Action Controls Node
-  const actionControlsNode = (
-    <div className="flex items-center gap-2 shrink-0">
-      {/* Export Excel */}
-      <button
-        onClick={handleDownloadExcel}
-        className="p-2 sm:px-2.5 sm:py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition shadow-2xs"
-        title="Download Rekap Skor Excel / CSV"
-      >
-        <Download className="w-3.5 h-3.5 text-emerald-600" />
-        <span className="hidden sm:inline">Excel</span>
-      </button>
-
-      {/* Print / PDF */}
-      <button
-        onClick={handlePrintPdf}
-        className="p-2 sm:px-2.5 sm:py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition shadow-2xs"
-        title="Cetak Dokumen / Ekspor PDF"
-      >
-        <Printer className="w-3.5 h-3.5 text-blue-600" />
-        <span className="hidden sm:inline">PDF</span>
-      </button>
-
-      {/* RBAC Portal Controls */}
+  // Desktop-Only Auth Controls (Excel & PDF moved to Sidebar; Mobile Auth moved to Mobile Drawer)
+  const desktopAuthControlsNode = (
+    <div className="hidden lg:flex items-center gap-2 shrink-0">
       {userRole === 'public' ? (
         <button
           onClick={() => setIsAuthModalOpen(true)}
-          className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-xs"
+          className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-xs"
         >
           <LogIn className="w-3.5 h-3.5" />
-          <span>Masuk Pegawai</span>
+          <span>Login</span>
         </button>
       ) : (
         <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
@@ -297,26 +219,23 @@ export default function TopFilterExportBar() {
           </div>
 
           {/* Desktop Middle: Autocomplete Search & Year Filter */}
-          <div className="hidden md:flex items-center gap-2 flex-1 max-w-xl mx-auto">
+          <div className="hidden lg:flex items-center gap-2 flex-1 max-w-xl mx-auto">
             {searchInputNode}
             {yearSelectorNode}
           </div>
 
-          {/* Desktop Right: Action Buttons & RBAC */}
-          <div className="hidden md:flex items-center justify-end">
-            {actionControlsNode}
+          {/* Desktop Right: RBAC Login / Logout */}
+          <div className="hidden lg:flex items-center justify-end">
+            {desktopAuthControlsNode}
           </div>
         </div>
       </header>
 
-      {/* 2. NON-STICKY MOBILE FILTER & ACTION ROW: Scrolls naturally out of view */}
-      <div className="md:hidden bg-white border-b border-slate-200/90 px-3 py-2 space-y-2">
+      {/* 2. COMPACT MOBILE FILTER ROW: Search & Year only (Zero wasted vertical space) */}
+      <div className="lg:hidden bg-white border-b border-slate-200/90 px-3 py-2">
         <div className="flex items-center gap-2 w-full">
           {searchInputNode}
           {yearSelectorNode}
-        </div>
-        <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-100">
-          {actionControlsNode}
         </div>
       </div>
     </div>
