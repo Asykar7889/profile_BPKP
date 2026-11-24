@@ -209,7 +209,12 @@ export default function SumselLeafletMap() {
       if (setDashActiveCity) setDashActiveCity(null);
       if (setDashHoveredCity) setDashHoveredCity(null);
 
-      // 3. Smoothly reset camera to initial South Sumatra overview
+      // 3. Dispatch event to close mobile risk sidebar on background click
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('map:close-risk-sidebar'));
+      }
+
+      // 4. Smoothly reset camera to initial South Sumatra overview
       if (geoJsonLayerRef.current && geoJsonLayerRef.current.getBounds().isValid()) {
         const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
         map.flyToBounds(geoJsonLayerRef.current.getBounds(), {

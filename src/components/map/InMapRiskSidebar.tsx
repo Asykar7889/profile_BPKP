@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useDashboard } from '@/context/DashboardContext';
 import { useOptionalSpiDashboard } from '@/context/SpiDashboardContext';
 import { RISK_TIERS, formatScore, formatNumber, getTierByScore } from '@/lib/scoringUtils';
@@ -100,13 +100,14 @@ export default function InMapRiskSidebar() {
     spiCtx?.toggleHeatmap();
   };
 
-  // Desktop (>= 768px): default open | Mobile (< 768px): default CLOSED
+  // Desktop (>= 1024px / lg): default open | Mobile (< 1024px): default CLOSED
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'filter' | 'detail'>('filter');
+  const panelRef = useRef<HTMLDivElement>(null);
 
   // Initialize responsive state after mounting
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
       setIsOpen(true);
     }
   }, []);
@@ -117,6 +118,35 @@ export default function InMapRiskSidebar() {
       setIsOpen(false);
     }
   }, [isMobileSidebarOpen]);
+
+  // Close mobile sidebar when user clicks the empty/white map background outside polygons
+  useEffect(() => {
+    const handleCloseSidebar = () => {
+      if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener('map:close-risk-sidebar', handleCloseSidebar);
+    return () => window.removeEventListener('map:close-risk-sidebar', handleCloseSidebar);
+  }, []);
+
+  // Airtight Leaflet DOM Event propagation isolation for panel container
+  useEffect(() => {
+    if (!panelRef.current) return;
+    const el = panelRef.current;
+
+    import('leaflet')
+      .then((leafletModule) => {
+        const LInstance = leafletModule.default || leafletModule;
+        if (LInstance?.DomEvent) {
+          LInstance.DomEvent.disableClickPropagation(el);
+          LInstance.DomEvent.disableScrollPropagation(el);
+        }
+      })
+      .catch(() => {
+        // Fallback: React synthetic stopPropagation handlers are also active
+      });
+  }, []);
 
   // When a user selects or hovers a city, automatically switch to "detail" tab if activeCity exists
   useEffect(() => {
@@ -183,30 +213,30 @@ export default function InMapRiskSidebar() {
         </button>
       )}
 
-      {/* 2. In-Map Sidebar: Strict 3-Part Flex Column (Header shrink-0, Body flex-1 overflow-y-auto, Footer shrink-0) */}
+      {/* 2. In-Map Sidebar: Right-side overlay on Mobile (< lg), Left-docked panel on Desktop (lg+) */}
       <div
+        ref={panelRef}
         onClick={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
         onDoubleClick={(e) => e.stopPropagation()}
         onWheel={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
         onTouchMove={(e) => e.stopPropagation()}
-        className={`absolute z-[500] bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-bpkp-blueBorder flex flex-col transition-all duration-300 ease-in-out select-none overflow-hidden ${
+        onTouchEnd={(e) => e.stopPropagation()}
+        className={`absolute z-[1000] bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-bpkp-blueBorder flex flex-col transition-transform duration-300 ease-in-out select-none overflow-hidden max-h-full ${
           /* Responsive positioning:
-             - Mobile: Anchored at bottom with max-h-[64%] so top half of map stays 100% visible
-             - Desktop (md:): Left docked panel filling top-to-bottom */
-          'left-2.5 right-2.5 bottom-2.5 max-h-[64%] md:top-2.5 md:left-2.5 md:bottom-2.5 md:right-auto md:max-h-none md:w-80'
+             - Mobile (< lg): Right-side floating overlay anchored inside map container (leaves left map canvas visible & interactive)
+             - Desktop (lg+): Left-docked panel filling top-to-bottom */
+          'top-2 right-2 bottom-2 w-[72%] max-w-[260px] lg:top-2.5 lg:left-2.5 lg:bottom-2.5 lg:right-auto lg:w-80 lg:max-w-none'
         } ${
           isOpen && !isMobileSidebarOpen
-            ? 'translate-y-0 md:translate-y-0 md:translate-x-0 opacity-100 pointer-events-auto'
-            : 'translate-y-full md:translate-y-0 md:-translate-x-full opacity-0 pointer-events-none'
+            ? 'translate-x-0 opacity-100 pointer-events-auto lg:translate-x-0 lg:opacity-100 lg:pointer-events-auto'
+            : 'translate-x-full opacity-0 pointer-events-none lg:-translate-x-full lg:opacity-0 lg:pointer-events-none'
         }`}
       >
-        {/* Mobile Drag-Handle Indicator Bar */}
-        <div className="w-10 h-1 bg-slate-300 rounded-full mx-auto mt-2 md:hidden flex-shrink-0" />
-
         {/* ── PART A: Compact Sticky Header (shrink-0) ── */}
-        <div className="p-3 border-b border-bpkp-border bg-gradient-to-r from-bpkp-blueSoft/70 to-white flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-2 min-w-0">
+        <div className="p-2.5 sm:p-3 border-b border-bpkp-border bg-gradient-to-r from-bpkp-blueSoft/70 to-white flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
             <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-bpkp-blue text-white flex items-center justify-center flex-shrink-0 shadow-sm">
               <Layers className="w-3.5 h-3.5" />
             </div>
@@ -214,19 +244,19 @@ export default function InMapRiskSidebar() {
               <h3 className="text-xs font-black text-bpkp-black leading-tight truncate">
                 Tingkat Risiko SPI
               </h3>
-              <p className="text-[9.5px] text-slate-500 font-medium">BPKP Sumsel • 17 Kab/Kota</p>
+              <p className="text-[9px] sm:text-[9.5px] text-slate-500 font-medium">BPKP Sumsel • 17 Kab/Kota</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={() => setIsOpen(false)}
-              className="p-1.5 text-slate-400 hover:text-bpkp-blue hover:bg-bpkp-blueSoft rounded-lg transition min-h-[36px] min-w-[36px] flex items-center justify-center"
+              className="p-1 sm:p-1.5 text-slate-400 hover:text-bpkp-blue hover:bg-bpkp-blueSoft rounded-lg transition min-h-[32px] min-w-[32px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center"
               title="Tutup Panel"
-              aria-label="Tutup"
+              aria-label="Tutup panel Tingkat Risiko SPI"
             >
-              <X className="w-4 h-4 md:hidden" />
-              <ChevronLeft className="w-4 h-4 hidden md:block" />
+              <X className="w-4 h-4 lg:hidden" />
+              <ChevronLeft className="w-4 h-4 hidden lg:block" />
             </button>
           </div>
         </div>
@@ -235,30 +265,30 @@ export default function InMapRiskSidebar() {
         <div className="flex p-1 bg-slate-100 border-b border-slate-200/60 text-xs font-semibold gap-1 flex-shrink-0">
           <button
             onClick={() => setActiveTab('filter')}
-            className={`flex-1 py-1.5 px-2 rounded-lg text-center transition flex items-center justify-center gap-1.5 min-h-[36px] ${
+            className={`flex-1 py-1 sm:py-1.5 px-1.5 sm:px-2 rounded-lg text-center transition flex items-center justify-center gap-1 min-h-[32px] sm:min-h-[36px] ${
               activeTab === 'filter'
                 ? 'bg-white text-bpkp-blue shadow-2xs font-bold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-            <span>Kategori Risiko</span>
+            <SlidersHorizontal className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+            <span className="text-[10px] sm:text-xs">Kategori</span>
           </button>
           <button
             onClick={() => setActiveTab('detail')}
-            className={`flex-1 py-1.5 px-2 rounded-lg text-center transition flex items-center justify-center gap-1.5 min-h-[36px] ${
+            className={`flex-1 py-1 sm:py-1.5 px-1.5 sm:px-2 rounded-lg text-center transition flex items-center justify-center gap-1 min-h-[32px] sm:min-h-[36px] ${
               activeTab === 'detail'
                 ? 'bg-white text-bpkp-blue shadow-2xs font-bold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Building2 className="w-3.5 h-3.5" />
-            <span>Detail Kota {currentCity ? `(${formatScore(Number(currentCity.skor_total))})` : ''}</span>
+            <Building2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+            <span className="text-[10px] sm:text-xs truncate">Detail {currentCity ? `(${formatScore(Number(currentCity.skor_total))})` : ''}</span>
           </button>
         </div>
 
         {/* ── PART B: Single Scrollable Body (flex-1 min-h-0 overflow-y-auto overscroll-contain) ── */}
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 space-y-2.5">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2.5 sm:p-3 space-y-2.5">
           {/* TAB 1: Kategori & Filter Risiko */}
           {activeTab === 'filter' && (
             <div className="space-y-2.5">

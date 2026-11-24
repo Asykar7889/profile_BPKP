@@ -15,9 +15,6 @@ import {
   LogOut,
   UserCheck,
   ShieldAlert,
-  ClipboardList,
-  History,
-  Sliders,
   X,
   Menu,
   PanelLeftOpen,
@@ -35,10 +32,6 @@ export default function TopFilterExportBar() {
     currentUser,
     userRole,
     setIsAuthModalOpen,
-    setIsPegawaiInputOpen,
-    setIsAdminHistoryOpen,
-    setIsAdminRiskSettingsOpen,
-    openPegawaiInputForCity,
     logoutUser,
   } = useSpiDashboard();
 
@@ -235,40 +228,18 @@ export default function TopFilterExportBar() {
         </button>
       ) : (
         <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
-          {userRole === 'pegawai' && (
-            <button
-              onClick={() => openPegawaiInputForCity()}
-              className="px-2.5 py-1 rounded-lg bg-blue-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs hover:bg-blue-700 transition"
-            >
-              <ClipboardList className="w-3.5 h-3.5" />
-              <span>Input Nilai</span>
-            </button>
-          )}
-
-          {userRole === 'admin' && (
-            <>
-              <Link
-                href="/admin/audit-log"
-                className="px-2.5 py-1 rounded-lg bg-purple-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs hover:bg-purple-700 transition"
-                title="Lihat Riwayat Audit Perubahan Nilai"
-              >
-                <History className="w-3.5 h-3.5" />
-                <span>Audit Log</span>
-              </Link>
-              <Link
-                href="/admin/atur-risiko"
-                className="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs hover:bg-indigo-700 transition"
-                title="Pengaturan Ambang Batas & Warna Tingkat Risiko (Dynamic Risk Thresholds)"
-              >
-                <Sliders className="w-3.5 h-3.5" />
-                <span>Atur Risiko</span>
-              </Link>
-            </>
-          )}
-
-          <div className="flex items-center gap-1 pl-1.5 pr-1">
-            <span className="text-[11px] font-bold text-slate-700 hidden lg:inline max-w-[120px] truncate">
+          <div className="flex items-center gap-2 pl-2 pr-1">
+            <span className="text-[11px] font-bold text-slate-700 hidden sm:inline max-w-[140px] truncate">
               {currentUser?.full_name}
+            </span>
+            <span
+              className={`text-[9px] px-1.5 py-0.5 rounded-md font-extrabold uppercase ${
+                userRole === 'admin'
+                  ? 'bg-indigo-100 text-indigo-700'
+                  : 'bg-blue-100 text-blue-700'
+              }`}
+            >
+              {userRole}
             </span>
             <button
               onClick={logoutUser}
